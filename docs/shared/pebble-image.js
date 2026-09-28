@@ -180,6 +180,9 @@
     var count = Array.isArray(cfg.sel) ? cfg.sel.length : (cfg.galleries || []).reduce(function (n, g) {
       return n + (g.enabled && Array.isArray(g.items) ? g.items.length : 0);
     }, 0);
+    // The phone ignores a franchise config with nothing selected, which would
+    // silently drop every other change made on the page.
+    if (Array.isArray(cfg.sel) && count === 0) { return 'Choose at least one image before saving.'; }
     if (count > 64) { return 'Choose at most 64 images across enabled galleries before saving.'; }
     if (encodeURIComponent(JSON.stringify(cfg)).length > MAX_CONFIG_URL_CHARS) {
       return 'Settings are too large to save. Remove some uploaded photos.';

@@ -124,11 +124,12 @@ for (const face of faces) {
 
   copyFileSync(path.join(tplDir, 'wscript'), path.join(projDir, 'wscript'));
 
-  // Style fonts (shared across all faces; template owns the TTFs).
+  // Style fonts (shared across all faces; template owns the TTFs) and their
+  // license texts, which must travel with every redistributed copy.
   const fontDir = path.join(projDir, 'resources', 'fonts');
   rmSync(fontDir, { recursive: true, force: true });
   mkdirSync(fontDir, { recursive: true });
-  for (const f of readdirSync(path.join(tplDir, 'fonts')).filter((f) => f.endsWith('.ttf'))) {
+  for (const f of readdirSync(path.join(tplDir, 'fonts')).filter((f) => /\.(ttf|txt)$/.test(f))) {
     copyFileSync(path.join(tplDir, 'fonts', f), path.join(fontDir, f));
   }
 

@@ -28,7 +28,7 @@ The collection:
 
 Data points, placed anywhere on a 3x3 grid:
 - Date, battery, steps, heart rate
-- Temperature and a weather icon (sun, or moon after dark)
+- Temperature and a weather icon (sun, or moon after dark), from Open-Meteo.com using your phone's location while they are on
 - Phone status and the loading spinner
 
 Looks:

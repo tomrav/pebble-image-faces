@@ -2,8 +2,9 @@
 
 The clock styles ship these fonts inside each watchface (`resources/fonts/`,
 copied by the generator from `src/shared/franchise-face/fonts/`). None are
-modified. License texts: https://openfontlicense.org (SIL OFL 1.1) and
-https://www.apache.org/licenses/LICENSE-2.0 (Apache 2.0).
+modified. The full license texts and each font's copyright notice and Reserved
+Font Names ship next to the TTFs as `OFL.txt` and `LICENSE-Apache-2.0.txt`, in
+the shared directory and in every face's `resources/fonts/`.
 
 | Font | Designer / source | License |
 | --- | --- | --- |

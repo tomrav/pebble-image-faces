@@ -6,7 +6,7 @@
 // wrangler OAuth login already stored in ~/Library/Preferences/.wrangler/
 // (run `npx wrangler login` if it has expired), or from CLOUDFLARE_API_TOKEN.
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 // Pages project name. Direct upload REPLACES the whole site, so point this at a
@@ -43,6 +43,20 @@ try {
 
 if (!projects.includes(PROJECT)) {
   wrangler(['pages', 'project', 'create', PROJECT, '--production-branch', BRANCH]);
+}
+
+// The faces open their settings pages from the host compiled into each .pbw
+// (BASE in src/pkjs/index.js). Deploying somewhere else only serves that
+// host's visitors; installed watches keep using the compiled one.
+const compiledHosts = new Set();
+for (const face of ['src/faces/photo-face/src/pkjs/index.js', 'src/shared/franchise-face/pkjs.tmpl.js']) {
+  const m = /var BASE = 'https:\/\/([^/']+)\//.exec(readFileSync(path.join(root, face), 'utf8'));
+  if (m) compiledHosts.add(m[1]);
+}
+const target = `${PROJECT}.pages.dev`;
+if (!compiledHosts.has(target)) {
+  console.warn(`\nWARNING: deploying to ${target}, but the faces are compiled to load from ${[...compiledHosts].join(', ')}.`);
+  console.warn('Installed watches will not see this deployment until BASE is changed and the faces are released again.\n');
 }
 
 wrangler(['pages', 'deploy', dir, '--project-name', PROJECT, '--branch', BRANCH]);

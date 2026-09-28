@@ -25,7 +25,7 @@ Photo Face turns your Pebble Time 2 into a photo frame with a clock, filled with
 Your photos:
 - Add as many as you like from the settings page and arrange them into galleries you create
 - Crop and zoom each one with a live preview of how it will look on the watch, and re-crop any photo later
-- Photos never leave your devices: converted on your phone, sent straight to the watch
+- Your photos never leave your devices: converted on your phone, sent straight to the watch
 - 23 example photos included to start from
 
 Playback:
@@ -34,7 +34,7 @@ Playback:
 
 Data points, placed anywhere on a 3x3 grid:
 - Date, battery, steps, heart rate
-- Temperature and a weather icon (sun, or moon after dark)
+- Temperature and a weather icon (sun, or moon after dark), from Open-Meteo.com using your phone's location while they are on
 - Phone status and the loading spinner
 
 Looks:

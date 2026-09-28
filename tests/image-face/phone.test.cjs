@@ -63,6 +63,12 @@ test('64 enabled images save; 65 are refused visibly in both gallery models',()=
  }
  const p=page();assert.equal(p.api.closeConfig({galleries:[{enabled:false,items:Array(100).fill('r:a')}]}),true);
 });
+test('an empty franchise selection is refused visibly instead of being dropped by the phone',()=>{
+ const p=page();assert.equal(p.api.closeConfig({sel:[],clockPos:2}),false);assert.match(p.notice.textContent,/at least one/);assert.equal(p.s.document.location,undefined);
+ assert.equal(page().api.closeConfig({sel:['b:char/totoro']}),true);
+ // Photo Face's gallery model may legitimately have nothing enabled; the phone sanitizes it.
+ assert.equal(page().api.closeConfig({galleries:[{enabled:true,items:[]}]}),true);
+});
 // Settings-page protocol v2 (photo-face): upload bytes cross once, page -> phone.
 // Objects born inside the vm have their own Object prototype, so compare by value.
 const same=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));

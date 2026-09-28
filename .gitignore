@@ -30,3 +30,6 @@ artifacts/
 **/resource_ids.auto.*
 
 *.tmp.md
+
+# wrangler local state
+.wrangler/

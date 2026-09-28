@@ -153,7 +153,7 @@ for (const face of faces) {
   const pkg = {
     name: face.project,
     author: 'case',
-    version: '1.3.4',  // cooperative image reads and idle playback checkpoints
+    version: '1.3.5',  // settings page moved to image-faces-config.pages.dev
     keywords: ['pebble-watchface'],
     private: true,
     dependencies: {},

@@ -1,6 +1,6 @@
 # Photo Face — appstore listing
 
-Release prepared for 2026-09-06: 1.1.4; notes in `release-1.1.4.txt`.
+Release prepared for 2026-09-28: 1.1.7; notes in `release-1.1.7.txt`.
 
 Previously released: 1.1.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.1.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups, multi-file upload on the
@@ -47,6 +47,7 @@ The settings page previews everything before you save.
 
 ## Release notes history (latest first; 1.0.2's note was reworded 2026-08-08)
 
+- 1.1.7 — Settings page moved to image-faces-config.pages.dev (the repo is public); weather credit and location note. See `release-1.1.7.txt`.
 - 1.1.6 — Top clock seated under the top-row data points by measured per-style ink insets (LCD/Neon overlapped). See `release-1.1.6.txt`.
 - 1.1.5 — Upload bytes travel once (thumbnails on the phone, send-only-new saves with a per-visit budget); Android picker one photo per tap; crop/zoom step with live watch preview and a ✂ re-crop badge (page-only, published 2026-09-17 after the store release). See `release-1.1.5.txt`.
 - 1.1.4 — Reliable shake handling, cooperative cached-image loading, fewer storage writes, cache recovery, bounded retries, and settings validation. See `release-1.1.4.txt`.
@@ -86,7 +87,7 @@ The settings page previews everything before you save.
 ## Form fields
 
 - Website URL: blank
-- Source code URL: this repository, once public
+- Source code URL: https://github.com/tomrav/pebble-image-faces
 
 ## Open items
 

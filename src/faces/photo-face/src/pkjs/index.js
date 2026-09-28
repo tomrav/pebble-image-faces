@@ -53,7 +53,7 @@
 
 // Hosted settings page (the built-in photos live there too, for the page's own
 // live processing — the face itself never fetches them).
-var BASE = 'https://glass-config.pages.dev/photo-face/';
+var BASE = 'https://image-faces-config.pages.dev/photo-face/';
 // Extensionless on purpose: Cloudflare Pages 308-redirects 'config.html' to
 // 'config', and the phone webview shouldn't have to follow that to open settings.
 var CONFIG_URL = BASE + 'config';

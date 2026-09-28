@@ -42,7 +42,7 @@ try {
 }
 
 if (!projects.includes(PROJECT)) {
-  wrangler(['pages', 'project', 'create', PROJECT, '--production-branch', BRANCH]);
+  wrangler(['pages', 'project', 'create', PROJECT, '--production-branch', BRANCH, '--force']);
 }
 
 // The faces open their settings pages from the host compiled into each .pbw
@@ -59,6 +59,9 @@ if (!compiledHosts.has(target)) {
   console.warn('Installed watches will not see this deployment until BASE is changed and the faces are released again.\n');
 }
 
-wrangler(['pages', 'deploy', dir, '--project-name', PROJECT, '--branch', BRANCH]);
+// --force: wrangler 4.14x delegates Pages commands to Workers static assets and
+// fails without a worker entry point; the flag keeps the classic Pages path and
+// the <project>.pages.dev host the faces are compiled to.
+wrangler(['pages', 'deploy', dir, '--project-name', PROJECT, '--branch', BRANCH, '--force']);
 
 console.log(`\nPublished docs/ -> https://${PROJECT}.pages.dev/`);

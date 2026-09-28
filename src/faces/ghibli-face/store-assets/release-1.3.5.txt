@@ -1,0 +1,6 @@
+Settings page moved to a new home, plus two small fixes.
+
+- The settings page now opens from image-faces-config.pages.dev; your selection and settings carry over unchanged.
+- Saving with no images selected is refused on the page instead of silently discarding your other changes.
+- The settings page explains that temperature and weather use your phone's approximate location, and credits Open-Meteo.com.
+- Source code is public: https://github.com/tomrav/pebble-image-faces

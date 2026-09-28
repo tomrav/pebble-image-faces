@@ -21,7 +21,7 @@
 // The settings model (data-point grid, looks, overrides) is ported from
 // photo-face's index.js — keep the two in sync when porting improvements.
 
-var BASE = 'https://glass-config.pages.dev/faces/__FACE_ID__/';
+var BASE = 'https://image-faces-config.pages.dev/faces/__FACE_ID__/';
 // Extensionless on purpose: Cloudflare Pages 308-redirects 'config.html' to
 // 'config', and the phone webview shouldn't have to follow that to open settings.
 var CONFIG_URL = BASE + 'config';

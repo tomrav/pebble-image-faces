@@ -210,7 +210,23 @@ function loadCfg() {
   } catch (e) { return defaultCfg(); }
 }
 
-function saveCfg() { try { localStorage.setItem('cfg', JSON.stringify(cfg)); } catch (e) {} }
+// A failed write (usually the phone's storage quota) leaves the previously stored
+// config in place; the new one then lives only until the phone JS restarts. The
+// settings page is told on its next open (cfg.saveFailed) so the user can act.
+var saveFailed = false;
+try { saveFailed = localStorage.getItem('saveFailed') === '1'; } catch (e) {}
+function saveCfg() {
+  try {
+    localStorage.setItem('cfg', JSON.stringify(cfg));
+    if (saveFailed) { saveFailed = false; try { localStorage.removeItem('saveFailed'); } catch (e) {} }
+    return true;
+  } catch (e) {
+    console.log('Config save FAILED (' + e + '); the previously stored settings remain');
+    saveFailed = true;
+    try { localStorage.setItem('saveFailed', '1'); } catch (e2) {}
+    return false;
+  }
+}
 
 // Fold a settings-page response's photo bytes into cfg (see the protocol note
 // at the top). resp.galleries is already in place. Returns how many refs were
@@ -1050,6 +1066,7 @@ Pebble.addEventListener('showConfiguration', function () {
   // Thumbnails stand in for the upload bytes (protocol note at the top). An
   // upload from before thumbnails existed has none: its full PNG goes instead,
   // once, and the page hands back a real thumbnail with its next save.
+  if (saveFailed) { forPage.saveFailed = true; }
   forPage.thumbs = {};
   for (var id in cfg.uploads) {
     if (cfg.uploads.hasOwnProperty(id)) { forPage.thumbs[id] = (cfg.thumbs || {})[id] || cfg.uploads[id]; }
@@ -1063,6 +1080,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
   var resp;
   try { resp = JSON.parse(decodeURIComponent(e.response)); }
   catch (err) { console.log('Bad config response: ' + err); return; }
+  delete resp.saveFailed;  // a page may echo the flag it was shown
 
   // One-off uploaded photo (bare upload, not saved into a gallery).
   if (resp.img) {
@@ -1098,9 +1116,12 @@ Pebble.addEventListener('webviewclosed', function (e) {
     migrateGrid(cfg);
     sanitizeGalleries(cfg);
     clampCursor();
-    saveCfg();
-    console.log('Saved config: ' + cfg.galleries.length + ' galleries, ' + Object.keys(cfg.uploads).length +
-      ' upload(s)' + (incoming.v >= 2 ? ', ' + Object.keys(incoming.uploads || {}).length + ' new' : ' (full-config page)'));
+    if (saveCfg()) {
+      console.log('Saved config: ' + cfg.galleries.length + ' galleries, ' + Object.keys(cfg.uploads).length +
+        ' upload(s)' + (incoming.v >= 2 ? ', ' + Object.keys(incoming.uploads || {}).length + ' new' : ' (full-config page)'));
+    } else {
+      console.log('Config applied for this session only: it could not be stored on the phone');
+    }
     sendSettings();
     armWeather();
     // No photo push: the watch keeps what is on screen unless it just left the

@@ -44,8 +44,8 @@ test('transport chunks have stable identity and retry the same offset',()=>{
   send([2],2,null,10,null);assert.notEqual(sent.at(-1).m.IMG_SEQ,first.m.IMG_SEQ);
 });
 function page(target) {
- const notice={textContent:'',setAttribute(){}};
- const s={window:{},location:{search:target?'?return_to='+encodeURIComponent(target):''},document:{getElementById(){return notice},createElement(){return notice},body:{appendChild(){}}}};
+ const notice={textContent:'',style:{},setAttribute(){}};
+ const s={window:{},location:{search:target?'?return_to='+encodeURIComponent(target):''},document:{getElementById(){return notice},createElement(){return notice},body:{appendChild(){},insertBefore(){},firstChild:null}}};
  vm.createContext(s);vm.runInContext(fs.readFileSync('docs/shared/pebble-image.js','utf8'),s);return {s,api:s.window.PebbleImage,notice};
 }
 test('settings reject executable and external callbacks without leaking config',()=>{
@@ -68,6 +68,29 @@ test('an empty franchise selection is refused visibly instead of being dropped b
  assert.equal(page().api.closeConfig({sel:['b:char/totoro']}),true);
  // Photo Face's gallery model may legitimately have nothing enabled; the phone sanitizes it.
  assert.equal(page().api.closeConfig({galleries:[{enabled:true,items:[]}]}),true);
+});
+for (const file of ['src/faces/photo-face/src/pkjs/index.js','src/shared/franchise-face/pkjs.tmpl.js']) {
+  test(file+': a failed storage write is not reported as saved and is surfaced to the settings page',()=>{
+    const p=phone(file);const logs=[];p.s.console.log=(m)=>logs.push(String(m));
+    const urls=[];p.s.Pebble.openURL=(u)=>urls.push(u);
+    const store={};p.s.localStorage.setItem=(k,v)=>{if(k==='cfg')throw new Error('QuotaExceededError');store[k]=v;};p.s.localStorage.removeItem=(k)=>{delete store[k]};
+    const resp=file.includes('photo-face')?{galleries:[{id:'g',name:'Renamed',enabled:true,end:'loop',items:['b:review-builtin']}],cursor:{g:0,i:0}}:{sel:['b:review-builtin'],clockPos:0};
+    p.handlers.webviewclosed({response:encodeURIComponent(JSON.stringify(resp))});
+    assert.equal(logs.some(l=>/^Saved config/.test(l)),false,'no success claim');
+    assert.ok(logs.some(l=>/save FAILED/.test(l)));assert.equal(store.saveFailed,'1');
+    p.handlers.showConfiguration();
+    const forPage=JSON.parse(decodeURIComponent(urls[0].split('#')[1]));assert.equal(forPage.saveFailed,true);
+    // The next successful save clears the flag, and an echoed flag is never stored.
+    p.s.localStorage.setItem=(k,v)=>{store[k]=v};
+    p.handlers.webviewclosed({response:encodeURIComponent(JSON.stringify({...resp,saveFailed:true}))});
+    assert.ok(logs.some(l=>/^Saved config/.test(l)));assert.equal(store.saveFailed,undefined);assert.equal(JSON.parse(store.cfg).saveFailed,undefined);
+    p.handlers.showConfiguration();assert.equal(JSON.parse(decodeURIComponent(urls[1].split('#')[1])).saveFailed,undefined);
+  });
+}
+test('the settings page shows the failed-save notice once and strips the flag',()=>{
+  const p=page();const cfg={sel:['b:x'],saveFailed:true};
+  assert.equal(p.api.noticeSaveFailed(cfg,'Hint.'),true);assert.match(p.notice.textContent,/could not be stored.*Hint\.$/);assert.equal(cfg.saveFailed,undefined);
+  assert.equal(p.api.noticeSaveFailed({sel:['b:x']}),false);
 });
 // Settings-page protocol v2 (photo-face): upload bytes cross once, page -> phone.
 // Objects born inside the vm have their own Object prototype, so compare by value.

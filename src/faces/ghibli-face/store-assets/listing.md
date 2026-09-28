@@ -1,6 +1,6 @@
 # Ghibli Time — appstore listing
 
-Release prepared for 2026-09-28: 1.3.5; notes in `release-1.3.5.txt`.
+Release prepared for 2026-09-28: 1.3.6; notes in `release-1.3.6.txt`.
 
 Previously released: 1.3.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.3.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups). First submitted 2026-08-09; listed since 2026-09-06.
@@ -41,6 +41,7 @@ The storybook settings page previews everything before you save.
 
 ## Release notes
 
+- 1.3.6 — Failed phone saves are reported on the settings page instead of silently reverting. See `release-1.3.6.txt`.
 - 1.3.5 — Settings page moved to image-faces-config.pages.dev (the repo is public); empty-selection guard; weather credit and location note. See `release-1.3.5.txt`.
 - 1.3.4 — Reliable shake handling, cooperative cached-image loading, fewer storage writes, cache recovery, bounded retries, and settings validation. See `release-1.3.4.txt`.
 

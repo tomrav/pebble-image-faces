@@ -153,7 +153,7 @@ for (const face of faces) {
   const pkg = {
     name: face.project,
     author: 'case',
-    version: '1.3.5',  // settings page moved to image-faces-config.pages.dev
+    version: '1.3.6',  // failed phone saves are reported, not swallowed
     keywords: ['pebble-watchface'],
     private: true,
     dependencies: {},

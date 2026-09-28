@@ -132,7 +132,23 @@ function loadCfg() {
   } catch (e) { return defaultCfg(); }
 }
 
-function saveCfg() { try { localStorage.setItem('cfg', JSON.stringify(cfg)); } catch (e) {} }
+// A failed write (usually the phone's storage quota) leaves the previously stored
+// config in place; the new one then lives only until the phone JS restarts. The
+// settings page is told on its next open (cfg.saveFailed) so the user can act.
+var saveFailed = false;
+try { saveFailed = localStorage.getItem('saveFailed') === '1'; } catch (e) {}
+function saveCfg() {
+  try {
+    localStorage.setItem('cfg', JSON.stringify(cfg));
+    if (saveFailed) { saveFailed = false; try { localStorage.removeItem('saveFailed'); } catch (e) {} }
+    return true;
+  } catch (e) {
+    console.log('Config save FAILED (' + e + '); the previously stored settings remain');
+    saveFailed = true;
+    try { localStorage.setItem('saveFailed', '1'); } catch (e2) {}
+    return false;
+  }
+}
 
 var cfg = loadCfg();
 
@@ -821,6 +837,7 @@ Pebble.addEventListener('appmessage', function (e) {
 Pebble.addEventListener('showConfiguration', function () {
   var forPage = {};
   for (var k in cfg) { if (cfg.hasOwnProperty(k) && k !== 'bag') { forPage[k] = cfg[k]; } }
+  if (saveFailed) { forPage.saveFailed = true; }
   // Cache-bust so the webview never opens a stale settings page.
   Pebble.openURL(CONFIG_URL + '?cb=' + Date.now() + '#' + encodeURIComponent(JSON.stringify(forPage)));
 });
@@ -830,6 +847,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
   var resp;
   try { resp = JSON.parse(decodeURIComponent(e.response)); }
   catch (err) { console.log('Bad config response: ' + err); return; }
+  delete resp.saveFailed;  // a page may echo the flag it was shown
   if (!resp.sel || !resp.sel.length) { console.log('Config had no selection, ignoring'); return; }
 
   if (resp.sel.length > SEL_MAX) { console.log('Config rejected: at most 64 images'); return; }
@@ -845,8 +863,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
   if (!cfg.overrides) { cfg.overrides = {}; }
   migrateGrid(cfg);
   seedSpin(cfg);
-  saveCfg();
-  console.log('Saved config: ' + cfg.sel.length + ' images selected');
+  if (saveCfg()) { console.log('Saved config: ' + cfg.sel.length + ' images selected'); }
+  else { console.log('Config applied for this session only: it could not be stored on the phone'); }
   sendSettings();
   armWeather();
   // No image push: the watch keeps what is on screen unless it just left the

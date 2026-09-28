@@ -1,0 +1,3 @@
+A failed save is now reported instead of silently lost.
+
+- If the phone cannot store your settings (usually because storage is full), the settings page now tells you the next time it opens, with what to do about it. Previously the save looked successful and reverted when the Pebble app restarted.

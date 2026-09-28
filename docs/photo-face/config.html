@@ -597,6 +597,7 @@
       if (!cfg.uploads) { cfg.uploads = {}; }
       if (!cfg.auto) { cfg.auto = { on: false, sec: 300 }; }
     } catch (e) { cfg = defaultCfg(); }
+    PebbleImage.noticeSaveFailed(cfg, 'If it keeps happening, remove some uploaded photos.');
 
     // Protocol with the PKJS (the note atop pkjs/index.js has the whole story).
     // v2 hands us THUMBNAILS in place of upload bytes and takes back only the

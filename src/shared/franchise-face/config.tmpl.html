@@ -297,6 +297,7 @@
         if (d.hasOwnProperty(k) && cfg[k] === undefined && k !== 'grid') { cfg[k] = d[k]; }
       }
       if (!cfg.sel.length) { cfg.sel = d.sel; }
+      PebbleImage.noticeSaveFailed(cfg);
       // Toggle-era config from an older PKJS: enabled points migrate to the
       // cell under the clock, in the old fixed order.
       if (!cfg.grid) {

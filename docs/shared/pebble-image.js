@@ -210,6 +210,22 @@
     }
   }
 
+  // The phone sets cfg.saveFailed when its last attempt to store the settings
+  // failed (usually its storage quota): the previous settings survived, the new
+  // ones may not outlive a restart of the Pebble app. Say so, up front, once.
+  function noticeSaveFailed(cfg, hint) {
+    if (!cfg || !cfg.saveFailed) { return false; }
+    delete cfg.saveFailed;
+    var notice = document.createElement('p');
+    notice.id = 'save-failed';
+    notice.setAttribute('role', 'alert');
+    notice.style.cssText = 'margin:0;padding:12px 16px;background:#b3261e;color:#fff;font:14px/1.4 system-ui,sans-serif';
+    notice.textContent = 'Your last save could not be stored on the phone, so it may not survive a restart of the Pebble app. ' +
+      'Check your settings and save again.' + (hint ? ' ' + hint : '');
+    document.body.insertBefore(notice, document.body.firstChild);
+    return true;
+  }
+
   global.PebbleImage = {
     MAX_W: MAX_W, MAX_H: MAX_H, MAX_IMAGE_BYTES: MAX_IMAGE_BYTES,
     MAX_CONFIG_URL_CHARS: MAX_CONFIG_URL_CHARS,
@@ -219,6 +235,7 @@
     sourceRect: sourceRect,
     getReturnTo: getReturnTo,
     configError: configError,
-    closeConfig: closeConfig
+    closeConfig: closeConfig,
+    noticeSaveFailed: noticeSaveFailed
   };
 })(window);

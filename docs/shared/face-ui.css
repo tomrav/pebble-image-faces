@@ -1,0 +1,90 @@
+/* Baseline styling for the shared watch preview (#watch/#ovl contract in
+ * face-config.js) on UNTHEMED pages — photo-face and touch-glass. The themed
+ * franchise pages deliberately do NOT load this: each styles its own frame. */
+#watch {
+  position: relative; width: 200px; height: 228px; margin: 0 auto; background: #000;
+  border: var(--pico-border-width) solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  overflow: hidden; image-rendering: pixelated;
+}
+#watch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#ovl { position: absolute; left: 0; right: 0; text-align: center; line-height: 1.05; }
+#ovl .clk { font-weight: 800; font-size: 38px; letter-spacing: 1px; font-family: "Helvetica Neue", Arial, sans-serif; }
+#ovl.f1 .clk { font-weight: 300; }
+#ovl.f2 .clk { font-family: "Courier New", monospace; font-weight: 700; }
+/* Heavy (BITHAM_30_BLACK) and Serif (DROID_SERIF_28_BOLD) render smaller on
+ * the watch than the 42px Bitham faces — mirror that. */
+#ovl.f3 .clk { font-family: "VT323", monospace; font-weight: 400; font-size: 42px; }
+#ovl.f4 .clk { font-family: "Permanent Marker", cursive; font-weight: 400; font-size: 30px; }
+#ovl .inf { font-size: 13px; font-weight: 700; }
+
+/* --- Grid placement (FaceConfig.attachGrid) -------------------------------- */
+/* 9 tap targets over the photo. Invisible until a chip arms placement; each
+ * carries its cell's stacked sample lines, positioned by the shared JS. */
+#watch .cells { position: absolute; inset: 0; }
+#watch .cell {
+  position: absolute; height: 18px; left: 0; right: 0;
+  /* columns: thirds as hit areas; text alignment does the visual work */
+}
+#watch .cell.c0, #watch .cell.c3, #watch .cell.c6 { right: 66.7%; }
+#watch .cell.c1, #watch .cell.c4, #watch .cell.c7 { left: 33.3%; right: 33.3%; }
+#watch .cell.c2, #watch .cell.c5, #watch .cell.c8 { left: 66.7%; }
+/* Stacks span the same 192px box the watch renders into (frame x=4, w=192) so
+ * text wraps at the same point — the preview is 1:1 with the panel, and the
+ * fonts below are sized to the real watch fonts, not decorative small type.
+ * Both were lies once: 13px preview type fit four items that clipped on the
+ * watch's 18-21px fonts. */
+#watch .cell .stack {
+  position: absolute; top: 0; width: 192px;
+  font-size: 16px; font-weight: 700; line-height: 22px; pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#watch .cell.c0 .stack, #watch .cell.c3 .stack, #watch .cell.c6 .stack { left: 4px; }
+#watch .cell.c1 .stack, #watch .cell.c4 .stack, #watch .cell.c7 .stack { left: 50%; transform: translateX(-50%); }
+#watch .cell.c2 .stack, #watch .cell.c5 .stack, #watch .cell.c8 .stack { right: 4px; }
+/* Data-point font pairs (see face-config.js INFO_PAIR):
+ * if0 GOTHIC_18_BOLD, if1 GOTHIC_18, if2 ROBOTO_CONDENSED_21. */
+#watch .cells.if1 .stack { font-weight: 400; }
+/* Digital's pair is ROBOTO_CONDENSED_21 — Android's sans-serif-condensed IS
+ * Roboto Condensed, so the phone webview renders the exact watch face; Arial
+ * Narrow stands in on desktop. Without the Android name the phone fell back to
+ * regular-width Roboto and truncated a full item earlier than the panel. */
+#watch .cells.if2 .stack { font-family: "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif;
+  font-stretch: condensed; font-size: 18px; }
+#watch .cells.if3 .stack { font-family: "VT323", monospace; font-weight: 400; font-size: 19px; }
+#watch .cells.if4 .stack { font-family: "Permanent Marker", cursive; font-weight: 400; font-size: 14px; }
+#watch .cell .stack .item, #watch .cell .stack .sep { display: inline; }
+#watch .cell .stack .item.sel { outline: 2px solid var(--pico-primary); outline-offset: 1px; }
+#watch .cell.armed {
+  height: 33.3%; border: 1px dashed rgba(255, 255, 255, .75); border-radius: 6px;
+  background: rgba(255, 255, 255, .12); cursor: pointer;
+}
+#watch .cell.armed.c0, #watch .cell.armed.c1, #watch .cell.armed.c2 { top: 0 !important; }
+#watch .cell.armed.c3, #watch .cell.armed.c4, #watch .cell.armed.c5 { top: 33.3% !important; }
+#watch .cell.armed.c6, #watch .cell.armed.c7, #watch .cell.armed.c8 { top: 66.7% !important; }
+#watch .cell.armed .stack { display: none; }
+
+/* Data-point list: one persistent row per point, under the preview. */
+.dplist { margin: var(--space-3) 0 var(--space-5); }
+.dplist .dprow {
+  display: flex; align-items: center; gap: 10px; padding: 6px 0;
+  border-top: var(--pico-border-width) solid var(--pico-muted-border-color);
+}
+.dplist .dprow:first-child { border-top: 0; }
+.dplist .dprow .lbl { flex: 1; font-size: .9rem; }
+.dplist .dprow:not(.on) .lbl { color: var(--pico-muted-color); }
+.dplist .dprow .pos {
+  width: auto; margin: 0; padding: .25rem .8rem; font-size: .8rem;
+  color: var(--pico-primary); background: transparent;
+  border: var(--pico-border-width) solid var(--pico-primary);
+  border-radius: var(--pico-border-radius); cursor: pointer;
+}
+.dplist .dprow:not(.on) .pos { color: var(--pico-muted-color); border-color: var(--pico-muted-border-color); }
+.dplist .dprow.arming .pos { background: var(--pico-primary); color: var(--pico-primary-inverse); border-color: var(--pico-primary); }
+.dplist .dprow .off {
+  width: 26px; height: 26px; margin: 0; padding: 0; line-height: 1; font-size: 15px;
+  border-radius: 50%; cursor: pointer;
+  color: var(--pico-muted-color); background: transparent;
+  border: var(--pico-border-width) solid var(--pico-muted-border-color);
+}
+.dplist .dprow .off:disabled { opacity: .35; cursor: default; }

@@ -1,0 +1,3 @@
+Clock at the top no longer runs into the data points above it.
+
+- With the clock at the top and data points in the top row, the digits overlapped the row for styles like LCD and Neon. The clock now sits a consistent few pixels below the row in every style and size.

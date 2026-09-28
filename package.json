@@ -1,0 +1,23 @@
+{
+  "name": "pebble-image-faces",
+  "private": true,
+  "description": "Photo Face and Ghibli Time: image watchfaces for Pebble Time 2, sharing one C engine and phone transport",
+  "license": "MIT",
+  "scripts": {
+    "pebble:list": "node scripts/pebble-project.mjs list",
+    "pebble:build": "node scripts/pebble-project.mjs build",
+    "pebble:emulator": "node scripts/pebble-project.mjs emulator",
+    "pebble:cloud": "node scripts/pebble-project.mjs cloud",
+    "pebble:logs": "node scripts/pebble-project.mjs logs",
+    "pebble:screenshot": "node scripts/pebble-project.mjs screenshot",
+    "pebble:test": "node scripts/pebble-project.mjs test",
+    "pebble:test:all": "node scripts/pebble-project.mjs test-all",
+    "pebble:reset": "pkill -9 -f qemu-pebble || true; pkill -9 -f pypkjs || true; pebble wipe || true; echo 'emulator reset (kill + wipe)'",
+    "pebble:gen-faces": "node scripts/gen-franchise-faces.mjs",
+    "pebble:gen-photo-face": "node scripts/gen-photo-face.mjs",
+    "pebble:import-photo-library": "node scripts/import-photo-library.mjs",
+    "pebble:publish-config": "node scripts/publish-config.mjs",
+    "pebble:sync-runtime": "node scripts/sync-face-runtime.mjs",
+    "pebble:test-runtime": "node --test tests/image-face/*.test.cjs"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "comment": "One entry per published face. `bundled` refs are <group>/<slug> where group is char|media|art (mapping to media/epaper/<id>, <id>_media, <id>_artwork). Keep bundled sets to ~8 images (~15KB each in the .pbw). UUIDs are permanent once published — never change one.",
+  "faces": [
+    {
+      "id": "ghibli",
+      "project": "ghibli-face",
+      "displayName": "Ghibli Time",
+      "uuid": "f3a41c3e-68f6-40c1-a96a-40f12ad75c16",
+      "bundled": [
+        "char/totoro",
+        "char/no-face",
+        "char/calcifer",
+        "char/kiki",
+        "char/ponyo",
+        "char/catbus",
+        "char/chihiro-ogino",
+        "char/howl",
+        "char/porco-rosso-character"
+      ]
+    }
+  ]
+}

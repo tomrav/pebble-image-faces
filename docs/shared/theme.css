@@ -1,0 +1,31 @@
+/*
+ * Shared tokens for Pebble settings pages — only what Pico doesn't already
+ * offer. Pico covers spacing (--pico-spacing, --pico-block-spacing-*,
+ * --pico-form-element-spacing-*), radius (--pico-border-radius) and grid gaps,
+ * so use those directly. What Pico lacks is photo-grid / thumbnail sizing for
+ * the watch's gallery views — standardized here and derived from Pico's scale.
+ * Load after Pico. Shared by every app/face config page under docs/.
+ */
+:root {
+  /* Spacing scale (Pico has no general-purpose scale, only component spacing). */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+
+  --pico-border-radius: 12px;                         /* rounder cards + inputs (Pico default is 4px) */
+
+  --gallery-cols: 3;                                  /* columns in a photo grid */
+  --thumb-ratio: 200 / 228;                           /* Emery screen aspect — matches the watch */
+  --thumb-border: 3px;                                /* selection / added outline width */
+  --thumb-radius: 10px;
+  --grid-gap: calc(var(--pico-spacing) * 0.5);        /* tighter than Pico's 1rem grid gap */
+  --button-radius: 999px;                             /* pill buttons */
+}
+
+/* Rounded (pill) buttons — Pico's default is the small --pico-border-radius. */
+button, input[type="submit"], input[type="button"], input[type="reset"], [role="button"] {
+  border-radius: var(--button-radius);
+}

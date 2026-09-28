@@ -1,0 +1,9 @@
+Add as many of your own photos as you like, a few at a time.
+
+- Crop and zoom each photo as you add it, with a live preview of how the watch will show it. A scissors badge on any uploaded photo lets you pick it again and re-crop.
+- Photos you add are sent to the phone once, when you save. Opening settings again no longer resends every photo, so a large gallery opens and saves quickly.
+- Saving is limited per visit, not per gallery: when a batch of new photos is as large as one save can carry, the page asks you to save and come back for the rest.
+- Android: the photo picker takes one photo per tap. Selecting several at once returned nothing in the Pebble app, silently.
+- Photos still resize and convert on the phone before they are sent; nothing is uploaded anywhere.
+
+Settings saved by an earlier version are kept.

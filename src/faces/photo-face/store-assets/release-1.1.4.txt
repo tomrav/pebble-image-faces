@@ -1,0 +1,9 @@
+More reliable image switching and smoother watch navigation.
+
+- Improved shake handling and recovery from interrupted image transfers.
+- Cached images load in small steps so the watch can respond between reads.
+- Fewer background storage writes; playback saves after five quiet seconds.
+- Repaired cache cleanup and limited failed download retries.
+- Clear validation for the 64-image selection limit and safer settings callbacks.
+
+The loading indicator may appear while reading a cached image. Leaving immediately after changing images may restore the previous saved image next time. Settings changes are still saved.

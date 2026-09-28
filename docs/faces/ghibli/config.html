@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<!--
+  Ghibli Time settings page — hosted on GitHub Pages, opened by the
+  watchface via Pebble.openURL with the current config in the URL hash.
+  GENERATED from src/shared/franchise-face/pages/ghibli.html by
+  scripts/gen-franchise-faces.mjs — edit the page source, not this copy.
+
+  Design: "Storybook Meadow" — a painted picture-book page. Layered
+  watercolour sky and rolling hills with drifting seeds and soot sprites,
+  hand-inked dividers, forest-green ink on warm cream paper, every control
+  hand-built (no native selects), and the live preview framed as a cottage
+  window with sill and curtains. One deliberate scheme, forced in light and
+  dark, so the dithered thumbnails always sit on bright paper.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Ghibli Time</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+  <!-- The watch styles' webfont twins, so the style pills and preview show the real faces. -->
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Permanent+Marker&family=Special+Elite&family=Monoton&family=Abril+Fatface&family=Black+Ops+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css">
+  <style>
+    /* ---- one deliberate palette, pinned for light AND dark OS ----------- */
+    :root, :root[data-theme] {
+      --cream:      #fdf5e2;   /* warm picture-book paper        */
+      --cream-2:    #fffbf0;
+      --cream-3:    #f7ecd3;
+      --forest:     #24402a;   /* deepest ink                    */
+      --forest-2:   #335c37;
+      --moss:       #4e7f42;
+      --moss-l:     #7cab5c;
+      --wood:       #9a7248;
+      --wood-d:     #6d4d2f;
+      --wood-l:     #c1996a;
+      --berry:      #c4623f;
+      --ink:        #2c3d2c;
+      --ink-soft:   #5b6b53;
+      --ink-faint:  #8b9682;
+      --line:       rgba(36,64,42,.18);
+      --line-soft:  rgba(36,64,42,.10);
+      --r:          22px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html { background: var(--cream); }
+    body {
+      position: relative; color: var(--ink); background: var(--cream);
+      font: 400 15px/1.55 "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    /* cold-press paper tooth, drawn not downloaded. Kept BELOW .wrap (z 1 vs
+       2) so it textures only the page ground and hero; the panels carry
+       their own tooth via section::after, and image surfaces lift above it
+       (z 1) so the artwork never shows the stripes. */
+    body::after {
+      content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .28;
+      background-image:
+        repeating-linear-gradient(114deg, rgba(120,100,60,.05) 0 1px, transparent 1px 5px),
+        repeating-linear-gradient(24deg,  rgba(255,255,255,.4) 0 1px, transparent 1px 6px);
+    }
+    section::after {
+      content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .28;
+      border-radius: var(--r);
+      background-image:
+        repeating-linear-gradient(114deg, rgba(120,100,60,.05) 0 1px, transparent 1px 5px),
+        repeating-linear-gradient(24deg,  rgba(255,255,255,.4) 0 1px, transparent 1px 6px);
+    }
+    /* the artwork rises above the tooth: the live preview and every SELECTED
+       card (unselected cards keep the grain — it suits their faded look) */
+    .casing { z-index: 1; }
+    .gallery .cell.on .frame { z-index: 1; }
+    .wrap { position: relative; z-index: 2; max-width: 460px; margin: 0 auto; padding: 0 15px 4px; }
+
+    /* ================= HERO: painted sky, hills, hero copy ============== */
+    .hero { position: relative; z-index: 1; overflow: hidden; }
+    .hero .scenery { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .hero .copy { position: relative; z-index: 2; text-align: center; padding: 38px 22px 136px; max-width: 460px; margin: 0 auto; }
+    .kicker {
+      margin: 0 0 4px; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11px;
+      letter-spacing: .3em; text-transform: uppercase; color: #235148;
+      text-shadow: 0 1px 0 rgba(255,255,255,.6);
+    }
+    h1 {
+      margin: 0; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 42px; line-height: 1.02;
+      color: #1b3620;
+      text-shadow: 0 2px 0 rgba(255,255,255,.55), 0 8px 20px rgba(24,52,30,.16);
+    }
+    .lede {
+      margin: 10px auto 0; max-width: 26em; font-size: 14.5px; color: #2d4429;
+      text-shadow: 0 1px 0 rgba(255,255,255,.5);
+    }
+    .flourish { display: block; width: 172px; height: 15px; margin: 7px auto 0; color: #2f5e3c; }
+
+    /* ================= PANELS =========================================== */
+    section {
+      position: relative; margin: 0 0 18px; padding: 16px 15px 18px;
+      background:
+        radial-gradient(120% 60% at 100% 0%, #fffdf4, rgba(255,253,244,0) 60%),
+        linear-gradient(178deg, var(--cream-2), #fdf6e6 62%, var(--cream-3));
+      border: 1.5px solid var(--line); border-radius: var(--r);
+      box-shadow: 0 2px 0 rgba(36,64,42,.10), 0 22px 34px -26px rgba(30,50,26,.75),
+                  0 1px 0 rgba(255,255,255,.9) inset;
+    }
+    .hood { display: flex; align-items: center; gap: 10px; margin: 0; }
+    .hood .badge {
+      flex: none; width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(120% 120% at 30% 20%, #8fbc6d, var(--moss) 58%, var(--forest-2));
+      color: #f6fbef; box-shadow: 0 2px 0 rgba(36,64,42,.28), 0 0 0 3px rgba(124,171,92,.18);
+    }
+    .hood .badge svg { width: 19px; height: 18px; display: block; }
+    .hood h2 {
+      margin: 0; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 17.5px;
+      line-height: 1.15; color: #1b3620;
+    }
+    .hood h2 small {
+      display: block; font-family: "Nunito Sans", sans-serif; font-weight: 600; font-size: 10.5px;
+      letter-spacing: .15em; text-transform: uppercase; color: var(--ink-faint); margin-top: -1px;
+    }
+    /* hand-inked rule: a wobbly vine with a leaf, drawn inline */
+    .inked {
+      height: 11px; margin: 9px 0 13px;
+      background-repeat: repeat-x; background-position: left center; background-size: 118px 11px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 118 11'><path d='M0 6.2c9-3.4 17 2.6 26-.6s14-4.4 24-1.2 18 4 27 1 15-3.6 21-.4' fill='none' stroke='%234e7f42' stroke-opacity='.55' stroke-width='1.6' stroke-linecap='round'/><path d='M58 4.6c-2.6-2.4-6-2.6-8.6-.6 2.8 2.2 6.2 2.2 8.6.6z' fill='%234e7f42' fill-opacity='.45'/></svg>");
+    }
+
+    /* ---- fields & hand-built segmented controls ------------------------- */
+    .field { padding: 11px 0; border-top: 1px dashed var(--line-soft); }
+    .field:first-of-type { border-top: 0; padding-top: 1px; }
+    .cap {
+      display: block; margin: 0 0 8px; font-family: "Baloo 2", sans-serif; font-weight: 600;
+      font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #66765b;
+    }
+    .seg { display: grid; gap: 7px; }
+    .seg.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .seg.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .seg.c4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .seg .pill {
+      -webkit-appearance: none; appearance: none; cursor: pointer; min-width: 0; width: 100%;
+      padding: 10px 4px; font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 13.5px;
+      color: #40543c; text-align: center;
+      background: linear-gradient(180deg, #fffdf5, #f5ecd6);
+      border: 1.5px solid rgba(36,64,42,.16); border-radius: 13px;
+      box-shadow: 0 1.5px 0 rgba(36,64,42,.10);
+      -webkit-tap-highlight-color: transparent;
+      transition: background .16s ease, color .16s ease, border-color .16s ease, transform .12s ease;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .seg .pill.wide { grid-column: span 2; }
+    .seg .pill:active { transform: translateY(1px); }
+    .seg .pill.on {
+      color: #f7fbef; border-color: var(--forest);
+      background: linear-gradient(180deg, #7cab5c, var(--moss) 46%, #38632f);
+      box-shadow: 0 2px 0 rgba(24,42,26,.35), 0 0 0 3px rgba(124,171,92,.2),
+                  0 1px 0 rgba(255,255,255,.28) inset;
+    }
+    /* switch rows */
+    .swrow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px dashed var(--line-soft); }
+    .swrow > .txt { flex: 1; min-width: 0; }
+    .swrow > .txt b { display: block; font-weight: 700; font-size: 14.5px; color: var(--ink); }
+    .swrow > .txt span { display: block; font-size: 12px; color: var(--ink-faint); }
+    .sw { position: relative; flex: none; width: 52px; height: 30px; margin: 0; }
+    .sw input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; z-index: 2; }
+    .sw i {
+      position: absolute; inset: 0; border-radius: 999px;
+      background: linear-gradient(180deg, #e6dfc9, #f2ecd9);
+      border: 1.5px solid rgba(36,64,42,.16);
+      box-shadow: 0 1px 3px rgba(36,64,42,.13) inset;
+      transition: background .2s ease, border-color .2s ease;
+    }
+    .sw i::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%;
+      background: radial-gradient(120% 120% at 32% 26%, #fff, #ece5d0);
+      box-shadow: 0 2px 4px rgba(36,64,42,.3);
+      transition: transform .22s cubic-bezier(.34,1.5,.6,1), background .2s ease;
+    }
+    .sw input:checked + i {
+      background: linear-gradient(180deg, #7cab5c, var(--moss) 55%, #38632f); border-color: var(--forest);
+    }
+    .sw input:checked + i::after {
+      transform: translateX(22px);
+      background: radial-gradient(120% 120% at 32% 26%, #fff, #eef6e2);
+    }
+    .sw input:focus-visible + i { box-shadow: 0 0 0 3px rgba(124,171,92,.35); }
+
+    /* ================= COTTAGE-WINDOW PREVIEW ========================== */
+    .windowwrap { text-align: center; padding-bottom: 8px; }
+    .casing {
+      position: relative; width: 244px; margin: 6px auto 0; padding: 13px;
+      border-radius: 16px 16px 7px 7px;
+      background:
+        repeating-linear-gradient(92deg, rgba(255,255,255,.05) 0 2px, rgba(0,0,0,.05) 2px 5px),
+        linear-gradient(180deg, var(--wood-l), var(--wood) 42%, var(--wood-d));
+      box-shadow: 0 3px 0 rgba(60,40,20,.4), 0 20px 28px -20px rgba(50,34,18,.9),
+                  0 1px 0 rgba(255,255,255,.35) inset;
+    }
+    #watch {
+      position: relative; width: 200px; height: 228px; margin: 0 auto; background: #16201a;
+      border-radius: 8px; overflow: hidden; image-rendering: pixelated;
+      box-shadow: 0 0 0 2px #5c3f26;
+    }
+    #watch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .curtain {
+      position: absolute; top: 0; width: 68px; height: 122px; z-index: 3; pointer-events: none;
+      filter: drop-shadow(2px 2px 4px rgba(20,14,6,.45));
+    }
+    .curtain.l { left: 0; }
+    .curtain.r { right: 0; transform: scaleX(-1); }
+    #ovl { position: absolute; left: 0; right: 0; z-index: 4; text-align: center; line-height: 1.05; }
+    #ovl .clk { font-weight: 800; font-size: 38px; letter-spacing: 1px; font-family: "Helvetica Neue", Arial, sans-serif; }
+    #ovl.f1 .clk { font-weight: 300; }
+    #ovl.f2 .clk { font-family: "Courier New", monospace; font-weight: 700; }
+    #ovl .inf { font-size: 13px; font-weight: 700; }
+    .sill {
+      position: relative; width: 278px; height: 16px; margin: 0 auto; border-radius: 4px 4px 7px 7px;
+      background: linear-gradient(180deg, #cfa676, var(--wood) 45%, #583d25);
+      box-shadow: 0 4px 0 rgba(60,40,20,.26), 0 16px 22px -14px rgba(50,34,18,.9);
+    }
+    .sill .pot { position: absolute; left: 14px; bottom: 13px; width: 40px; height: 45px; }
+    .sill .cup { position: absolute; right: 18px; bottom: 13px; width: 28px; height: 26px; }
+    .windowwrap .cap2 {
+      margin: 24px 0 0; font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 11px;
+      letter-spacing: .22em; text-transform: uppercase; color: var(--ink-faint);
+    }
+
+    /* ================= GALLERY ========================================= */
+    .legend { margin: 0 0 4px; font-size: 13.5px; color: var(--ink-soft); }
+    .legend b { color: var(--forest-2); font-weight: 700; }
+    .grouphead { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; }
+    .grouphead:first-child { margin-top: 6px; }
+    .grouphead h3 {
+      margin: 0; min-width: 0; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 15.5px;
+      color: #1b3620; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      background-image: linear-gradient(90deg, rgba(196,98,63,.5), rgba(196,98,63,.5));
+      background-size: 100% 3px; background-position: 0 100%; background-repeat: no-repeat;
+      padding-bottom: 2px;
+    }
+    .grouphead .n {
+      flex: none; font: 700 10.5px/1 "Nunito Sans", sans-serif; color: #f4f8ee;
+      padding: 5px 8px; background: linear-gradient(180deg, var(--moss-l), var(--moss)); border-radius: 999px;
+      box-shadow: 0 1.5px 0 rgba(36,64,42,.3);
+    }
+    .grouphead .bulk { margin-left: auto; display: flex; gap: 6px; }
+    .grouphead .bulk a {
+      cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+      font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11px;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--forest-2);
+      padding: 6px 11px; border: 1.5px solid var(--line); border-radius: 999px;
+      background: linear-gradient(180deg, #fffdf5, #f4ecd6); box-shadow: 0 1.5px 0 rgba(36,64,42,.12);
+    }
+    .grouphead .bulk a:active { background: var(--moss); color: #fff; border-color: var(--forest); }
+
+    .gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 0; }
+    .gallery .cell { position: relative; min-width: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .gallery .frame {
+      position: relative; border-radius: 14px; overflow: hidden; background: #e7dfc6;
+      border: 2px solid rgba(36,64,42,.14); box-shadow: 0 1.5px 0 rgba(36,64,42,.10);
+      transition: border-color .18s ease, box-shadow .18s ease, transform .16s ease;
+    }
+    .gallery img {
+      display: block; width: 100%; aspect-ratio: 200 / 228; object-fit: cover;
+      opacity: .55; filter: saturate(.3) brightness(1.06) contrast(.92) sepia(.14);
+      transition: opacity .18s ease, filter .18s ease;
+    }
+    .gallery .cell.on .frame {
+      border-color: var(--moss);
+      box-shadow: 0 0 0 3px rgba(124,171,92,.3), 0 3px 0 rgba(36,64,42,.28), 0 12px 18px -12px rgba(30,50,26,.8);
+    }
+    .gallery .cell.on img { opacity: 1; filter: none; }
+    .gallery .cell:active .frame { transform: translateY(1px) scale(.985); }
+    .gallery .tick {
+      position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; border-radius: 50%;
+      background: linear-gradient(180deg, #8cbc68, var(--moss) 55%, #38632f);
+      border: 2px solid rgba(253,245,226,.95);
+      opacity: 0; transform: scale(.45);
+      transition: opacity .16s ease, transform .18s cubic-bezier(.34,1.55,.6,1);
+      box-shadow: 0 1px 4px rgba(20,34,16,.5);
+    }
+    .gallery .tick::after {
+      content: ""; position: absolute; left: 4.5px; top: 3.5px; width: 5px; height: 8.5px;
+      border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(42deg);
+    }
+    .gallery .cell.on .tick { opacity: 1; transform: scale(1); }
+    .gallery .bundle {
+      position: absolute; left: 4px; top: 4px; width: 18px; height: 17px; color: #fdf7e6;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.6));
+    }
+    .gallery .name {
+      display: block; margin: 6px 3px 0; font-size: 10.5px; line-height: 1.28; color: var(--ink-faint);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .gallery .cell.on .name { color: var(--ink); font-weight: 700; }
+
+    /* ================= SAVE / FOOTER =================================== */
+    /* Sticky save bar: hidden until the config differs from what PKJS sent,
+       so edits can't be lost by closing the webview with Save out of sight
+       at the bottom of a long page (same behavior as the photo-face page,
+       dressed as a wooden sill). */
+    .savebar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 11px 15px;
+      background: linear-gradient(180deg, var(--cream-2), var(--cream-3));
+      border-top: 1.5px solid var(--line);
+      box-shadow: 0 -10px 24px -14px rgba(30, 50, 26, .8);
+      transform: translateY(110%); transition: transform .25s ease;
+    }
+    .savebar.dirty { transform: translateY(0); }
+    /* paper tooth is a fixed overlay (z 40); the bar must ride above it with
+       its own grain so it doesn't look flatter than the page */
+    .savebar::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .28;
+      background-image:
+        repeating-linear-gradient(114deg, rgba(120,100,60,.05) 0 1px, transparent 1px 5px),
+        repeating-linear-gradient(24deg,  rgba(255,255,255,.4) 0 1px, transparent 1px 6px);
+    }
+    #status {
+      display: block; margin: 0; max-width: 34%;
+      font: 700 10.5px/1.35 "Nunito Sans", sans-serif; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    #status b { color: var(--forest-2); }
+    #discard {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      margin: 0; width: auto; padding: 9px 16px;
+      font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--ink-faint); background: transparent;
+      border: 1.5px solid rgba(36,64,42,.25); border-radius: 999px;
+      white-space: nowrap;
+    }
+    #save {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      min-width: 0; padding: 11px 24px; color: #fbfdf4;
+      font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13.5px;
+      letter-spacing: .2em; text-transform: uppercase;
+      background: linear-gradient(180deg, #7cab5c, var(--moss) 45%, #2f5b31);
+      border: 1.5px solid var(--forest); border-radius: 999px;
+      box-shadow: 0 4px 0 #24402a, 0 22px 26px -18px rgba(24,50,22,.95),
+                  0 1px 0 rgba(255,255,255,.3) inset;
+    }
+    #save:active { transform: translateY(2px); box-shadow: 0 2px 0 #24402a, 0 12px 18px -14px rgba(24,50,22,.9); }
+    #save svg { width: 18px; height: 17px; flex: none; }
+    footer { text-align: center; padding: 18px 0 28px; }
+    footer .sprites { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin: 0 0 10px; }
+    footer .sprites svg { width: 22px; height: 22px; color: #29331f; opacity: .6; }
+    footer .sprites svg:nth-child(2) { width: 30px; height: 30px; opacity: .8; }
+    footer p {
+      margin: 0; font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 11.5px;
+      letter-spacing: .16em; text-transform: uppercase; color: #94a087;
+    }
+
+    /* ---- style pills: each previews its own watch font ------------------ */
+    .seg.styles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .seg .fontpill { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 7px 2px 6px; }
+    .fontpill .t { font-size: 16px; line-height: 1.15; }
+    .fontpill small { font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; }
+    .fontpill.fs0 .t { font-weight: 800; font-family: "Helvetica Neue", Arial, sans-serif; letter-spacing: .5px; }
+    .fontpill.fs1 .t { font-weight: 300; font-family: "Helvetica Neue", Arial, sans-serif; letter-spacing: .5px; }
+    .fontpill.fs2 .t { font-weight: 700; font-family: "Courier New", monospace; }
+    .fontpill.fs3 .t { font-family: "VT323", monospace; font-size: 19px; }
+    .fontpill.fs4 .t { font-family: "Permanent Marker", cursive; font-size: 14px; padding-top: 2px; }
+    .fontpill.fs5 .t { font-family: "Special Elite", serif; font-size: 15px; padding-top: 1px; }
+    .fontpill.fs6 .t { font-family: "Monoton", cursive; font-size: 14px; padding-top: 2px; }
+    .fontpill.fs7 .t { font-family: "Abril Fatface", serif; font-size: 15px; padding-top: 1px; }
+    .fontpill.fs8 .t { font-family: "Black Ops One", cursive; font-size: 13px; padding-top: 2px; }
+    .fontpill.fs9 .t { font-family: "DSEG7-Classic", monospace; font-size: 12px; padding-top: 3px; }
+
+    /* ---- preview overlay: the ten clock styles -------------------------- */
+    #ovl.f3 .clk { font-family: "VT323", monospace; font-weight: 400; font-size: 42px; }
+    #ovl.f4 .clk { font-family: "Permanent Marker", cursive; font-weight: 400; font-size: 30px; }
+    #ovl.f5 .clk { font-family: "Special Elite", serif; font-weight: 400; font-size: 34px; }
+    #ovl.f6 .clk { font-family: "Monoton", cursive; font-weight: 400; font-size: 32px; }
+    #ovl.f7 .clk { font-family: "Abril Fatface", serif; font-weight: 400; font-size: 36px; }
+    #ovl.f8 .clk { font-family: "Black Ops One", cursive; font-weight: 400; font-size: 31px; }
+    #ovl.f9 .clk { font-family: "DSEG7-Classic", monospace; font-weight: 400; font-size: 27px; }
+
+    /* ---- grid placement cells over the preview (FaceConfig.attachGrid) --
+       Adapted from docs/shared/face-ui.css — themed pages style their own. */
+    #watch .cells { position: absolute; inset: 0; z-index: 5; }
+    #watch .cell { position: absolute; height: 18px; left: 0; right: 0; }
+    #watch .cell.c0, #watch .cell.c3, #watch .cell.c6 { right: 66.7%; }
+    #watch .cell.c1, #watch .cell.c4, #watch .cell.c7 { left: 33.3%; right: 33.3%; }
+    #watch .cell.c2, #watch .cell.c5, #watch .cell.c8 { left: 66.7%; }
+    #watch .cell .stack {
+      position: absolute; top: 0; width: 192px;
+      font-size: 16px; font-weight: 700; line-height: 22px; pointer-events: none;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #watch .cell.c0 .stack, #watch .cell.c3 .stack, #watch .cell.c6 .stack { left: 4px; }
+    #watch .cell.c1 .stack, #watch .cell.c4 .stack, #watch .cell.c7 .stack { left: 50%; transform: translateX(-50%); }
+    #watch .cell.c2 .stack, #watch .cell.c5 .stack, #watch .cell.c8 .stack { right: 4px; }
+    #watch .cells.if1 .stack { font-weight: 400; }
+    #watch .cells.if2 .stack { font-family: "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif;
+      font-stretch: condensed; font-size: 18px; }
+    #watch .cells.if3 .stack { font-family: "VT323", monospace; font-weight: 400; font-size: 19px; }
+    #watch .cells.if4 .stack { font-family: "Permanent Marker", cursive; font-weight: 400; font-size: 14px; }
+    #watch .cells.if5 .stack { font-family: "Special Elite", serif; font-size: 15px; }
+    #watch .cells.if7 .stack { font-family: "Abril Fatface", serif; font-size: 15px; }
+    #watch .cells.if8 .stack { font-family: "Black Ops One", cursive; font-size: 13px; }
+    #watch .cell .stack .item, #watch .cell .stack .sep { display: inline; }
+    #watch .cell.armed {
+      height: 33.3%; border: 1.5px dashed rgba(253,245,226,.85); border-radius: 6px;
+      background: rgba(124,171,92,.22); cursor: pointer;
+    }
+    #watch .cell.armed.c0, #watch .cell.armed.c1, #watch .cell.armed.c2 { top: 0 !important; }
+    #watch .cell.armed.c3, #watch .cell.armed.c4, #watch .cell.armed.c5 { top: 33.3% !important; }
+    #watch .cell.armed.c6, #watch .cell.armed.c7, #watch .cell.armed.c8 { top: 66.6% !important; }
+    #watch .cell.armed .stack { display: none; }
+
+    /* ---- data-point list: one storybook row per point ------------------- */
+    .dplist { margin: 14px 0 2px; text-align: left; }
+    .dplist .dprow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--line-soft); }
+    .dplist .dprow:first-child { border-top: 0; }
+    .dplist .dprow .lbl { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; color: var(--ink); }
+    .dplist .dprow:not(.on) .lbl { color: var(--ink-faint); font-weight: 600; }
+    .dplist .dprow .pos {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      margin: 0; width: auto; max-width: 60%; padding: 6px 12px;
+      font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 12px;
+      color: #40543c; background: linear-gradient(180deg, #fffdf5, #f5ecd6);
+      border: 1.5px solid rgba(36,64,42,.16); border-radius: 999px;
+      box-shadow: 0 1.5px 0 rgba(36,64,42,.10);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dplist .dprow:not(.on) .pos { color: var(--ink-faint); border-style: dashed; }
+    .dplist .dprow.arming .pos {
+      color: #f7fbef; border-color: var(--forest);
+      background: linear-gradient(180deg, #7cab5c, var(--moss) 46%, #38632f);
+    }
+    .dplist .dprow .off {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      margin: 0; width: 26px; height: 26px; padding: 0; line-height: 1; font-size: 14px;
+      border-radius: 50%; color: var(--ink-faint); background: transparent;
+      border: 1.5px solid rgba(36,64,42,.16);
+    }
+    .dplist .dprow .off:disabled { opacity: .35; cursor: default; }
+    .dphint { margin: 12px 0 0; font-size: 12px; color: var(--ink-faint); text-align: center; }
+
+    /* ---- color wells + the 64-color palette ------------------------------ */
+    .wellrow { display: flex; align-items: center; gap: 10px; }
+    .well {
+      -webkit-appearance: none; appearance: none; margin: 0; padding: 0;
+      width: 32px; height: 32px; border-radius: 50%; flex: none; cursor: pointer;
+      border: 2px solid rgba(36,64,42,.35); box-shadow: 0 1.5px 0 rgba(36,64,42,.15);
+    }
+    .wellhint { font-size: 12px; color: var(--ink-faint); }
+    .autochip {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      margin: 0; width: auto; padding: 6px 11px;
+      font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 10.5px;
+      letter-spacing: .12em; color: var(--ink-faint); background: transparent;
+      border: 1.5px dashed rgba(36,64,42,.25); border-radius: 999px;
+    }
+    .autochip.on { color: var(--forest-2); border-style: solid; border-color: var(--moss); }
+    #barrow { display: none; }
+    #barrow.show { display: block; }
+    #palpop {
+      position: fixed; inset: 0; z-index: 60; display: none;
+      background: rgba(24, 34, 20, .55); align-items: center; justify-content: center;
+    }
+    #palpop.show { display: flex; }
+    #palpop .card {
+      background: var(--cream-2); border: 1.5px solid var(--line); border-radius: 18px;
+      padding: 16px 16px 12px; max-width: 330px;
+      box-shadow: 0 22px 34px -20px rgba(30,50,26,.9);
+    }
+    #palpop h3 {
+      margin: 0 0 10px; font-family: "Baloo 2", sans-serif; font-weight: 700;
+      font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #1b3620;
+    }
+    #palpop .grid { display: grid; grid-template-columns: repeat(8, 30px); gap: 6px; }
+    #palpop .grid button {
+      -webkit-appearance: none; appearance: none; margin: 0; padding: 0;
+      width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+      border: 1.5px solid rgba(36,64,42,.2);
+    }
+    #palpop .grid button.on { outline: 3px solid var(--moss); outline-offset: 1px; }
+    #palpop .foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+    #palpop .foot button {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      margin: 0; width: auto; padding: 7px 14px;
+      font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px;
+      color: var(--forest-2); background: linear-gradient(180deg, #fffdf5, #f4ecd6);
+      border: 1.5px solid var(--line); border-radius: 999px;
+    }
+
+    /* ---- per-image override: pencil badge + inline sheet ----------------- */
+    .gallery .ovbtn {
+      /* above the selected frame, which sits at z 1 to escape the paper grain */
+      position: absolute; z-index: 2; left: 5px; bottom: 26px; width: 30px; height: 30px; margin: 0; padding: 0;
+      -webkit-appearance: none; appearance: none;
+      font-size: 15px; line-height: 1; border-radius: 9px; cursor: pointer;
+      background: rgba(27, 54, 32, .72); color: #fdf7e6; border: 1px solid rgba(253,245,226,.4);
+    }
+    .gallery .ovbtn.marked { background: var(--moss); border-color: var(--forest); }
+    .gallery .ovsheet { grid-column: 1 / -1; }
+    .ovsheet {
+      margin: 2px 0 4px; padding: 10px 12px; border-radius: 14px;
+      border: 1.5px dashed rgba(78,127,66,.55); background: var(--cream-2);
+    }
+    .ovsheet .ovhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ovsheet .ovhead b {
+      font-family: "Baloo 2", sans-serif; font-size: 12px; letter-spacing: .12em;
+      text-transform: uppercase; color: #1b3620;
+    }
+    .ovsheet .ovhead .close {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      margin: 0 0 0 auto; width: auto; padding: 5px 12px;
+      font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11px;
+      color: var(--forest-2); background: linear-gradient(180deg, #fffdf5, #f4ecd6);
+      border: 1.5px solid var(--line); border-radius: 999px;
+    }
+    .ovsheet .ovrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 0; }
+    .ovsheet .ovrow .rowcap {
+      flex: 0 0 74px; font-family: "Baloo 2", sans-serif; font-weight: 600;
+      font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: #66765b;
+    }
+    .ovsheet .chip {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      margin: 0; width: auto; padding: 5px 10px;
+      font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 11.5px;
+      color: #40543c; background: linear-gradient(180deg, #fffdf5, #f5ecd6);
+      border: 1.5px solid rgba(36,64,42,.16); border-radius: 999px;
+    }
+    .ovsheet .chip.on {
+      color: #f7fbef; border-color: var(--forest);
+      background: linear-gradient(180deg, #7cab5c, var(--moss) 46%, #38632f);
+    }
+
+    @media (max-width: 360px) {
+      h1 { font-size: 35px; }
+      .seg .pill { font-size: 12.5px; padding: 9px 3px; }
+      .fontpill .t { font-size: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <!-- ---------- shared hand-drawn glyphs ---------- -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="leaf" viewBox="0 0 20 18">
+        <path d="M18 1.2C9.6 1.6 2.6 7 1.9 14.6c-.1.9.5 1.6 1.4 1.6 7.6-.4 14-6.6 14.7-15z" fill="currentColor"/>
+        <path d="M3.6 15.6C7 11.4 11.4 7.6 16.4 4.4" fill="none" stroke="rgba(28,48,22,.32)" stroke-width="1.2" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="sprout" viewBox="0 0 20 18">
+        <path d="M10 17V7.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M10 8.4C10 5 7.6 2.3 4 1.8 3.4 5.5 5.8 8.4 10 8.4z" fill="currentColor"/>
+        <path d="M10 10.6c0-3.1 2.2-5.6 5.7-6.1.5 3.4-1.8 6.1-5.7 6.1z" fill="currentColor" opacity=".72"/>
+      </symbol>
+      <symbol id="cloudlet" viewBox="0 0 24 14">
+        <path d="M5.5 13C2.5 13 .8 11.3.8 9.2c0-2 1.5-3.5 3.6-3.6C5 2.6 7.4.8 10.4.8c2.7 0 5 1.6 5.8 4 .5-.2 1-.3 1.6-.3 2.8 0 5.4 2 5.4 4.4 0 2.3-1.9 4.1-4.7 4.1H5.5z" fill="currentColor"/>
+      </symbol>
+      <symbol id="sprite" viewBox="0 0 20 20">
+        <!-- a fuzzy soot sprite: spiky body, two bright eyes -->
+        <path d="M10 1.4l1.5 2 2.2-1.2-.3 2.5 2.5.3-1.6 1.9 2.1 1.4-2.3.9 1.1 2.3-2.5-.3.2 2.5-2.1-1.4-1.5 2-1.4-2-2.2 1.3.3-2.6-2.5-.2 1.6-2L3 7.2l2.3-1-1-2.2 2.4.3-.2-2.5 2 1.4z" fill="currentColor"/>
+        <circle cx="10" cy="10" r="5.4" fill="currentColor"/>
+        <circle cx="8.1" cy="9.4" r="1.7" fill="#fdf7e6"/>
+        <circle cx="12.1" cy="9.4" r="1.7" fill="#fdf7e6"/>
+        <circle cx="8.3" cy="9.6" r=".75" fill="#1e2a1c"/>
+        <circle cx="11.9" cy="9.6" r=".75" fill="#1e2a1c"/>
+      </symbol>
+      <symbol id="seed" viewBox="0 0 14 14">
+        <!-- a dandelion seed adrift -->
+        <path d="M7 7.6v5" fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/>
+        <g fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round">
+          <path d="M7 7.2 2.6 3.2"/><path d="M7 7.2 7 1.4"/><path d="M7 7.2 11.4 3.2"/>
+          <path d="M7 7.2 1.6 6"/><path d="M7 7.2 12.4 6"/>
+        </g>
+        <circle cx="7" cy="12.8" r="1.1" fill="currentColor"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- ================= HERO ================= -->
+  <div class="hero">
+    <svg class="scenery" viewBox="0 0 390 330" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="skyg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"   stop-color="#57aedb"/>
+          <stop offset=".4"  stop-color="#8bcbe8"/>
+          <stop offset=".74" stop-color="#c6e7f3"/>
+          <stop offset="1"   stop-color="#e9f4e5"/>
+        </linearGradient>
+        <radialGradient id="sung" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#fff6d8"/><stop offset=".5" stop-color="#f9d689" stop-opacity=".85"/>
+          <stop offset="1" stop-color="#f6c56a" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="h1g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#d3e8c9"/><stop offset="1" stop-color="#a8cf9a"/>
+        </linearGradient>
+        <linearGradient id="h2g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#a5cc90"/><stop offset="1" stop-color="#7cb069"/>
+        </linearGradient>
+        <linearGradient id="h3g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#76ab60"/><stop offset="1" stop-color="#4a8140"/>
+        </linearGradient>
+        <linearGradient id="h4g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#457b3e"/><stop offset="1" stop-color="#28502e"/>
+        </linearGradient>
+      </defs>
+
+      <rect width="390" height="330" fill="url(#skyg)"/>
+      <circle cx="306" cy="56" r="66" fill="url(#sung)"/>
+      <circle cx="306" cy="56" r="22" fill="#fff3d2"/>
+      <circle cx="306" cy="56" r="15" fill="#fbdc99"/>
+
+      <!-- far cloud bank -->
+      <g style="color:#eaf6fb" opacity=".85">
+        <use href="#cloudlet" x="-16" y="22" width="122" height="71"/>
+        <use href="#cloudlet" x="210" y="94" width="152" height="89"/>
+      </g>
+      <!-- mid clouds -->
+      <g style="color:#ffffff" opacity=".95">
+        <use href="#cloudlet" x="14"  y="38" width="120" height="70"/>
+        <use href="#cloudlet" x="118" y="10" width="88"  height="51"/>
+        <use href="#cloudlet" x="242" y="18" width="72"  height="42"/>
+        <use href="#cloudlet" x="298" y="70" width="106" height="62"/>
+      </g>
+      <!-- near wisps -->
+      <g style="color:#ffffff" opacity=".68">
+        <use href="#cloudlet" x="70"  y="104" width="152" height="89"/>
+        <use href="#cloudlet" x="-32" y="130" width="112" height="65"/>
+      </g>
+
+      <!-- a small flock, high up -->
+      <g fill="none" stroke="#3d5747" stroke-width="1.8" stroke-linecap="round" opacity=".5">
+        <path d="M158 84c3-3.6 5-3.6 8 0"/>
+        <path d="M176 74c2.5-3 4.2-3 6.7 0"/>
+        <path d="M191 88c2-2.5 3.5-2.5 5.5 0"/>
+      </g>
+
+      <!-- rolling hills, four layers deep -->
+      <path d="M-10 214c46-30 92-34 140-12 40 18 82 14 124-10 34-19 74-19 146 6v146H-10V214z" fill="url(#h1g)"/>
+      <path d="M-10 246c54-26 104-24 150 4 38 23 88 17 134-8 32-17 72-15 116 2v112H-10V246z" fill="url(#h2g)"/>
+      <path d="M-10 278c64-22 122-16 176 12 42 22 100 14 142-10 26-15 56-16 92-8v86H-10v-80z" fill="url(#h3g)"/>
+      <path d="M-10 306c78-16 150-6 208 12 44 14 118 8 202-10v42H-10v-44z" fill="url(#h4g)"/>
+
+      <!-- hedgerow bushes -->
+      <g fill="#5d9150" opacity=".8">
+        <ellipse cx="40"  cy="292" rx="26" ry="13"/>
+        <ellipse cx="94"  cy="300" rx="20" ry="10"/>
+        <ellipse cx="284" cy="288" rx="24" ry="12"/>
+        <ellipse cx="334" cy="296" rx="18" ry="9"/>
+      </g>
+
+      <!-- a little cottage tucked into the far ridge, one window lit -->
+      <g>
+        <path d="M60 268h34v20H60z" fill="#f1e5c8"/>
+        <path d="M77 252l24 17H53z" fill="#a85f43"/>
+        <path d="M77 252l24 17H53z" fill="none" stroke="#8b4a34" stroke-width="1"/>
+        <rect x="86" y="246" width="6" height="12" fill="#8b6a48"/>
+        <rect x="66" y="273" width="8" height="8" fill="#f6c56a"/>
+        <rect x="80" y="273" width="9" height="15" fill="#7d5a3c"/>
+        <path d="M56 288h42" stroke="#3f6a37" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+        <g style="color:#fdf5e2" opacity=".55">
+          <use href="#cloudlet" x="84" y="234" width="26" height="15"/>
+        </g>
+      </g>
+
+      <!-- the lone tree on the ridge, layered canopy -->
+      <g>
+        <path d="M330 302v-44" stroke="#2f4b2c" stroke-width="4.2" stroke-linecap="round"/>
+        <path d="M330 274c-7-7-13-9-19-9" stroke="#2f4b2c" stroke-width="2.6" stroke-linecap="round"/>
+        <ellipse cx="330" cy="250" rx="30" ry="20" fill="#3c6e36"/>
+        <ellipse cx="313" cy="256" rx="19" ry="13" fill="#487f3f"/>
+        <ellipse cx="345" cy="255" rx="17" ry="12" fill="#2f5c2c"/>
+        <ellipse cx="330" cy="240" rx="17" ry="11" fill="#549147"/>
+        <ellipse cx="318" cy="243" rx="12" ry="8" fill="#5f9b50"/>
+        <ellipse cx="341" cy="245" rx="11" ry="7.5" fill="#3f7239"/>
+      </g>
+      <!-- crooked fence marching over the near hill -->
+      <g stroke="#5d4227" stroke-linecap="round" opacity=".7">
+        <path d="M26 322v-22" stroke-width="3"/><path d="M58 316v-22" stroke-width="3"/>
+        <path d="M90 313v-22" stroke-width="3"/><path d="M122 314v-22" stroke-width="3"/>
+        <path d="M22 304c34-4 70-6 104-4" stroke-width="2.4" fill="none"/>
+        <path d="M22 312c34-4 70-6 104-4" stroke-width="2.4" fill="none"/>
+      </g>
+
+      <!-- grasses catching the light -->
+      <g stroke="#8ec478" stroke-width="1.6" stroke-linecap="round" opacity=".7" fill="none">
+        <path d="M150 328c2-8 1-13-2-18"/><path d="M158 328c0-9 2-14 6-19"/>
+        <path d="M166 328c-1-7-4-12-8-16"/>
+        <path d="M234 328c2-8 1-13-2-18"/><path d="M242 328c0-9 2-14 6-19"/>
+      </g>
+
+      <!-- drifting seeds -->
+      <g style="color:#57755a" opacity=".5">
+        <use href="#seed" x="52"  y="150" width="18" height="18" transform="rotate(-16 61 159)"/>
+        <use href="#seed" x="238" y="196" width="15" height="15" transform="rotate(22 245 203)"/>
+        <use href="#seed" x="330" y="150" width="13" height="13" transform="rotate(-8 336 156)"/>
+      </g>
+      <!-- three soot sprites hopping along the near ridge -->
+      <g style="color:#242e1c" opacity=".9">
+        <use href="#sprite" x="176" y="276" width="34" height="34"/>
+        <use href="#sprite" x="208" y="288" width="24" height="24"/>
+        <use href="#sprite" x="230" y="298" width="18" height="18"/>
+      </g>
+      <!-- torn paper edge: the meadow meets the page -->
+      <path d="M-10 316c54 9 108 12 172 6 66-6 130-12 218-2v20H-10z" fill="#fdf5e2"/>
+      <g stroke="#4a8140" stroke-width="1.7" stroke-linecap="round" fill="none" opacity=".65">
+        <path d="M40 320c1-6 0-10-3-14"/><path d="M48 320c0-7 2-11 5-15"/>
+        <path d="M204 318c1-6 0-10-3-14"/><path d="M212 318c0-7 2-11 5-15"/>
+        <path d="M300 320c1-6 0-10-3-14"/><path d="M308 320c0-7 2-11 5-15"/>
+      </g>
+    </svg>
+
+    <div class="copy">
+      <p class="kicker">A field guide to the rotation</p>
+      <h1>Ghibli Time</h1>
+      <svg class="flourish" viewBox="0 0 180 18" aria-hidden="true">
+        <path d="M6 12c26-5 46 3 68-1" fill="none" stroke="currentColor" stroke-opacity=".6" stroke-width="1.9" stroke-linecap="round"/>
+        <path d="M174 12c-26-5-46 3-68-1" fill="none" stroke="currentColor" stroke-opacity=".6" stroke-width="1.9" stroke-linecap="round"/>
+        <g fill="currentColor" fill-opacity=".62">
+          <path d="M26 10c-1-4-5-6.6-9.4-6.4C17 8 21 10.4 26 10z"/>
+          <path d="M48 8.4c-1-4-5-6.6-9.4-6.4.4 4.4 4.4 6.8 9.4 6.4z"/>
+          <path d="M154 10c1-4 5-6.6 9.4-6.4C163 8 159 10.4 154 10z"/>
+          <path d="M132 8.4c1-4 5-6.6 9.4-6.4-.4 4.4-4.4 6.8-9.4 6.4z"/>
+        </g>
+        <g fill="currentColor">
+          <path d="M90 1.6c-5.4.4-9 4-9.4 9.4 5.4-.4 9-4 9.4-9.4z" fill-opacity=".8"/>
+          <path d="M90 2.4c5.4.4 9 4 9.4 9.4-5.4-.4-9-4-9.4-9.4z" fill-opacity=".55"/>
+          <circle cx="90" cy="14.4" r="2" fill-opacity=".7"/>
+        </g>
+      </svg>
+      <p class="lede">Choose the friends, films and paintings that drift past your
+        wrist, then set how the clock sits over them. The view turns on the
+        interval below — or whenever you shake your wrist.</p>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- ================= CLOCK ================= -->
+    <section>
+      <div class="hood">
+        <span class="badge"><svg viewBox="0 0 20 18"><use href="#sprout"/></svg></span>
+        <h2>Clock &amp; overlay<small>How the hours sit on the art</small></h2>
+      </div>
+      <div class="inked"></div>
+
+      <div class="field">
+        <span class="cap">Position</span>
+        <div class="seg c3" id="clockpos" role="radiogroup" aria-label="Clock position"></div>
+      </div>
+      <div class="field">
+        <span class="cap">Hours</span>
+        <div class="seg c3" id="timefmt" role="radiogroup" aria-label="Time format"></div>
+      </div>
+      <div class="swrow">
+        <span class="txt"><b>Show seconds</b><span>The clock ticks along with them</span></span>
+        <label class="sw"><input type="checkbox" role="switch" id="secondssw" aria-label="Show seconds"><i></i></label>
+      </div>
+      <div class="field">
+        <span class="cap">Style</span>
+        <div class="seg styles" id="font" role="radiogroup" aria-label="Clock style"></div>
+      </div>
+      <div class="field">
+        <span class="cap">Size</span>
+        <div class="seg c3" id="fontsize" role="radiogroup" aria-label="Clock size"></div>
+      </div>
+      <div class="swrow">
+        <span class="txt"><b>Style the data points</b><span>Off keeps them in the classic bold</span></span>
+        <label class="sw"><input type="checkbox" role="switch" id="fontallsw" aria-label="Style the data points"><i></i></label>
+      </div>
+      <div class="field">
+        <span class="cap">Ink</span>
+        <div class="wellrow" id="inkwells"></div>
+      </div>
+      <div class="field">
+        <span class="cap">Backdrop</span>
+        <div class="seg c3" id="bg" role="radiogroup" aria-label="Backdrop"></div>
+      </div>
+      <div class="field" id="barrow">
+        <span class="cap">Bar colour</span>
+        <div class="wellrow" id="barwells"></div>
+      </div>
+    </section>
+
+    <!-- ================= PREVIEW ================= -->
+    <section class="windowwrap">
+      <div class="hood">
+        <span class="badge"><svg viewBox="0 0 20 18"><use href="#leaf"/></svg></span>
+        <h2>Through the window<small>Live preview of your settings</small></h2>
+      </div>
+      <div class="inked"></div>
+
+      <div class="casing">
+        <div id="watch">
+          <img id="pimg" alt="">
+          <svg class="curtain l" viewBox="0 0 68 122" aria-hidden="true">
+            <!-- a gathered linen curtain, tied back -->
+            <path d="M0 0h50c-11 14-15 29-12 46 2 12-1 21-9 27 9 5 13 13 12 24-1 12-6 20-15 25H0V0z" fill="#f7ecd2"/>
+            <path d="M0 0h50c-11 14-15 29-12 46 2 12-1 21-9 27 9 5 13 13 12 24-1 12-6 20-15 25H0" fill="none" stroke="#b39a68" stroke-opacity=".7" stroke-width="1.2"/>
+            <g fill="none" stroke="#c4ad7e" stroke-opacity=".65" stroke-width="1.1">
+              <path d="M9 2c-4 22-3 44 2 64 4 16 3 32-4 44"/>
+              <path d="M23 1c-5 20-5 40 0 58 4 15 1 32-7 44"/>
+              <path d="M36 2c-6 16-8 32-5 46"/>
+            </g>
+            <!-- fabric shading in the folds -->
+            <path d="M14 0c-3 22-2 44 3 64 4 16 2 32-5 44l6 14V0h-4z" fill="#e6d7ab" fill-opacity=".55"/>
+            <!-- the tie-back band -->
+            <path d="M16 66c8 3 14 4 22 3l1 8c-9 1-16 0-24-3z" fill="#a8bb84"/>
+            <path d="M16 66c8 3 14 4 22 3" fill="none" stroke="#7d9560" stroke-width="1"/>
+          </svg>
+          <svg class="curtain r" viewBox="0 0 68 122" aria-hidden="true">
+            <!-- a gathered linen curtain, tied back -->
+            <path d="M0 0h50c-11 14-15 29-12 46 2 12-1 21-9 27 9 5 13 13 12 24-1 12-6 20-15 25H0V0z" fill="#f7ecd2"/>
+            <path d="M0 0h50c-11 14-15 29-12 46 2 12-1 21-9 27 9 5 13 13 12 24-1 12-6 20-15 25H0" fill="none" stroke="#b39a68" stroke-opacity=".7" stroke-width="1.2"/>
+            <g fill="none" stroke="#c4ad7e" stroke-opacity=".65" stroke-width="1.1">
+              <path d="M9 2c-4 22-3 44 2 64 4 16 3 32-4 44"/>
+              <path d="M23 1c-5 20-5 40 0 58 4 15 1 32-7 44"/>
+              <path d="M36 2c-6 16-8 32-5 46"/>
+            </g>
+            <!-- fabric shading in the folds -->
+            <path d="M14 0c-3 22-2 44 3 64 4 16 2 32-5 44l6 14V0h-4z" fill="#e6d7ab" fill-opacity=".55"/>
+            <!-- the tie-back band -->
+            <path d="M16 66c8 3 14 4 22 3l1 8c-9 1-16 0-24-3z" fill="#a8bb84"/>
+            <path d="M16 66c8 3 14 4 22 3" fill="none" stroke="#7d9560" stroke-width="1"/>
+          </svg>
+          <div id="ovl"><div class="clk">10:08</div><div class="inf"></div></div>
+        </div>
+      </div>
+      <div class="sill">
+        <svg class="pot" viewBox="0 0 32 36" aria-hidden="true">
+          <path d="M16 22V11" stroke="#3c6e36" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M16 13c0-4.2-3.2-7.4-7.4-8-.6 4.6 2.6 8 7.4 8z" fill="#487f3f"/>
+          <path d="M16 16.5c0-4.6 3.2-8 8-8.6.6 5-2.8 8.6-8 8.6z" fill="#5d9150"/>
+          <path d="M6.5 22h19l-2.4 13H8.9z" fill="#b0684a"/>
+          <path d="M5 19.5h22v3.6H5z" fill="#c9835d"/>
+        </svg>
+        <svg class="cup" viewBox="0 0 22 20" aria-hidden="true">
+          <path d="M3 6h13v7a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V6z" fill="#f4ead2" stroke="#a98f63" stroke-width="1.1"/>
+          <path d="M16 8h2a2.4 2.4 0 0 1 0 5h-2" fill="none" stroke="#a98f63" stroke-width="1.1"/>
+          <path d="M7 4.4c1.2-1.4 1.2-2.6 0-4M11.5 4.4c1.2-1.4 1.2-2.6 0-4" fill="none" stroke="#c6b48d" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <p class="cap2">Bottom of the hour, on your wrist</p>
+
+      <!-- Every data point is always listed; its button shows where it lives
+           ("Off" = not shown). Items sharing a spot flow side by side. -->
+      <p class="dphint">Tap a position button, then tap a spot on the watch
+        above. Items on the same spot sit side by side.</p>
+      <div class="dplist" id="dplist"></div>
+      <div class="field" id="unitrow">
+        <span class="cap">Degrees in</span>
+        <div class="seg c2" id="tempunit" role="radiogroup" aria-label="Temperature unit"></div>
+      </div>
+    </section>
+
+    <!-- ================= ROTATION ================= -->
+    <section>
+      <div class="hood">
+        <span class="badge"><svg viewBox="0 0 24 14"><use href="#cloudlet"/></svg></span>
+        <h2>The breeze<small>How often the view turns</small></h2>
+      </div>
+      <div class="inked"></div>
+
+      <div class="field">
+        <span class="cap">New image every</span>
+        <div class="seg c4" id="rotate" role="radiogroup" aria-label="New image every"></div>
+      </div>
+      <div class="swrow">
+        <span class="txt"><b>Shake to advance</b><span>A flick of the wrist turns the page</span></span>
+        <label class="sw"><input type="checkbox" role="switch" id="shake" aria-label="Shake to advance"><i></i></label>
+      </div>
+      <div class="swrow">
+        <span class="txt"><b>Shuffle order</b><span>Wander instead of walking in line</span></span>
+        <label class="sw"><input type="checkbox" role="switch" id="shuffle" aria-label="Shuffle order"><i></i></label>
+      </div>
+    </section>
+
+    <!-- ================= COLLECTION ================= -->
+    <section>
+      <div class="hood">
+        <span class="badge"><svg viewBox="0 0 20 20"><use href="#sprite"/></svg></span>
+        <h2>The collection<small>Tap to add or leave behind</small></h2>
+      </div>
+      <div class="inked"></div>
+      <p class="legend">Cards marked with a <b>leaf</b> already live on the watch
+        and appear even without your phone; the rest drift over from the phone
+        when their turn comes.</p>
+      <div id="groups"></div>
+    </section>
+
+    <div id="palpop" role="dialog" aria-modal="true">
+      <div class="card">
+        <h3 id="paltitle">Pick a colour</h3>
+        <div class="grid" id="palgrid"></div>
+        <div class="foot"><button type="button" id="palcancel">Cancel</button></div>
+      </div>
+    </div>
+
+    <div class="savebar" id="savebar">
+      <small id="status"></small>
+      <button id="discard">Discard</button>
+      <button id="save">
+        <svg viewBox="0 0 20 18" aria-hidden="true"><use href="#leaf"/></svg>
+        Save
+      </button>
+    </div>
+    <footer>
+      <div class="sprites">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><use href="#sprite"/></svg>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><use href="#sprite"/></svg>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><use href="#sprite"/></svg>
+      </div>
+      <p>Take a breath — the wind will carry it</p>
+    </footer>
+  </div>
+
+  <p style="text-align:center">Choose up to 64 images. Up to 48 downloaded images fit offline, depending on size.</p>
+  <script src="../../shared/pebble-image.js?v=20260906a"></script>
+  <script src="../../shared/face-config.js?v=20260901a"></script>
+  <script>
+    // Every image in the catalog: key ('b:group/slug' bundled, 'r:group/slug'
+    // hosted), display name, group label, thumbnail URL.
+    // >>>GEN:CATALOG>>>
+    var CATALOG = [
+      { key: "r:char/anna-sasaki", name: "Anna Sasaki", group: "Characters", img: "img/char/anna-sasaki.png" },
+      { key: "r:char/arrietty", name: "Arrietty", group: "Characters", img: "img/char/arrietty.png" },
+      { key: "r:char/ashitaka", name: "Ashitaka", group: "Characters", img: "img/char/ashitaka.png" },
+      { key: "r:char/baron-humbert-von-gikkingen", name: "Baron Humbert Von Gikkingen", group: "Characters", img: "img/char/baron-humbert-von-gikkingen.png" },
+      { key: "r:char/boh", name: "Boh", group: "Characters", img: "img/char/boh.png" },
+      { key: "b:char/calcifer", name: "Calcifer", group: "Characters", img: "img/char/calcifer.png" },
+      { key: "b:char/catbus", name: "Catbus", group: "Characters", img: "img/char/catbus.png" },
+      { key: "b:char/chihiro-ogino", name: "Chihiro Ogino", group: "Characters", img: "img/char/chihiro-ogino.png" },
+      { key: "r:char/gray-heron", name: "Gray Heron", group: "Characters", img: "img/char/gray-heron.png" },
+      { key: "r:char/haku", name: "Haku", group: "Characters", img: "img/char/haku.png" },
+      { key: "b:char/howl", name: "Howl", group: "Characters", img: "img/char/howl.png" },
+      { key: "r:char/jiji", name: "Jiji", group: "Characters", img: "img/char/jiji.png" },
+      { key: "r:char/jiro-horikoshi", name: "Jiro Horikoshi", group: "Characters", img: "img/char/jiro-horikoshi.png" },
+      { key: "r:char/kamaji", name: "Kamaji", group: "Characters", img: "img/char/kamaji.png" },
+      { key: "b:char/kiki", name: "Kiki", group: "Characters", img: "img/char/kiki.png" },
+      { key: "r:char/kodama", name: "Kodama", group: "Characters", img: "img/char/kodama.png" },
+      { key: "r:char/lin", name: "Lin", group: "Characters", img: "img/char/lin.png" },
+      { key: "r:char/mahito-maki", name: "Mahito Maki", group: "Characters", img: "img/char/mahito-maki.png" },
+      { key: "r:char/markl", name: "Markl", group: "Characters", img: "img/char/markl.png" },
+      { key: "r:char/mei-kusakabe", name: "Mei Kusakabe", group: "Characters", img: "img/char/mei-kusakabe.png" },
+      { key: "r:char/moro", name: "Moro", group: "Characters", img: "img/char/moro.png" },
+      { key: "r:char/nausicaa", name: "Nausicaa", group: "Characters", img: "img/char/nausicaa.png" },
+      { key: "b:char/no-face", name: "No Face", group: "Characters", img: "img/char/no-face.png" },
+      { key: "r:char/ohmu", name: "Ohmu", group: "Characters", img: "img/char/ohmu.png" },
+      { key: "r:char/pazu", name: "Pazu", group: "Characters", img: "img/char/pazu.png" },
+      { key: "b:char/ponyo", name: "Ponyo", group: "Characters", img: "img/char/ponyo.png" },
+      { key: "b:char/porco-rosso-character", name: "Porco Rosso Character", group: "Characters", img: "img/char/porco-rosso-character.png" },
+      { key: "r:char/robot-soldiers", name: "Robot Soldiers", group: "Characters", img: "img/char/robot-soldiers.png" },
+      { key: "r:char/san", name: "San", group: "Characters", img: "img/char/san.png" },
+      { key: "r:char/satsuki-kusakabe", name: "Satsuki Kusakabe", group: "Characters", img: "img/char/satsuki-kusakabe.png" },
+      { key: "r:char/seita-yokokawa", name: "Seita Yokokawa", group: "Characters", img: "img/char/seita-yokokawa.png" },
+      { key: "r:char/setsuko-yokokawa", name: "Setsuko Yokokawa", group: "Characters", img: "img/char/setsuko-yokokawa.png" },
+      { key: "r:char/sheeta", name: "Sheeta", group: "Characters", img: "img/char/sheeta.png" },
+      { key: "r:char/shizuku-tsukishima", name: "Shizuku Tsukishima", group: "Characters", img: "img/char/shizuku-tsukishima.png" },
+      { key: "r:char/sophie-hatter", name: "Sophie Hatter", group: "Characters", img: "img/char/sophie-hatter.png" },
+      { key: "r:char/sosuke", name: "Sosuke", group: "Characters", img: "img/char/sosuke.png" },
+      { key: "r:char/susuwatari", name: "Susuwatari", group: "Characters", img: "img/char/susuwatari.png" },
+      { key: "r:char/teto", name: "Teto", group: "Characters", img: "img/char/teto.png" },
+      { key: "b:char/totoro", name: "Totoro", group: "Characters", img: "img/char/totoro.png" },
+      { key: "r:char/turnip-head", name: "Turnip Head", group: "Characters", img: "img/char/turnip-head.png" },
+      { key: "r:char/umi-matsuzaki", name: "Umi Matsuzaki", group: "Characters", img: "img/char/umi-matsuzaki.png" },
+      { key: "r:char/witch-of-the-waste", name: "Witch Of The Waste", group: "Characters", img: "img/char/witch-of-the-waste.png" },
+      { key: "r:char/yubaba", name: "Yubaba", group: "Characters", img: "img/char/yubaba.png" },
+      { key: "r:char/zeniba", name: "Zeniba", group: "Characters", img: "img/char/zeniba.png" },
+      { key: "r:media/castle-in-the-sky", name: "Castle In The Sky", group: "Posters & box art", img: "img/media/castle-in-the-sky.png" },
+      { key: "r:media/grave-of-the-fireflies", name: "Grave Of The Fireflies", group: "Posters & box art", img: "img/media/grave-of-the-fireflies.png" },
+      { key: "r:media/howls-moving-castle-film", name: "Howls Moving Castle Film", group: "Posters & box art", img: "img/media/howls-moving-castle-film.png" },
+      { key: "r:media/kikis-delivery-service", name: "Kikis Delivery Service", group: "Posters & box art", img: "img/media/kikis-delivery-service.png" },
+      { key: "r:media/my-neighbor-totoro", name: "My Neighbor Totoro", group: "Posters & box art", img: "img/media/my-neighbor-totoro.png" },
+      { key: "r:media/nausicaa-of-the-valley-of-the-wind-film", name: "Nausicaa Of The Valley Of The Wind Film", group: "Posters & box art", img: "img/media/nausicaa-of-the-valley-of-the-wind-film.png" },
+      { key: "r:media/pom-poko", name: "Pom Poko", group: "Posters & box art", img: "img/media/pom-poko.png" },
+      { key: "r:media/ponyo-film", name: "Ponyo Film", group: "Posters & box art", img: "img/media/ponyo-film.png" },
+      { key: "r:media/princess-mononoke", name: "Princess Mononoke", group: "Posters & box art", img: "img/media/princess-mononoke.png" },
+      { key: "r:media/spirited-away", name: "Spirited Away", group: "Posters & box art", img: "img/media/spirited-away.png" },
+      { key: "r:media/the-cat-returns", name: "The Cat Returns", group: "Posters & box art", img: "img/media/the-cat-returns.png" },
+      { key: "r:media/the-tale-of-the-princess-kaguya-film", name: "The Tale Of The Princess Kaguya Film", group: "Posters & box art", img: "img/media/the-tale-of-the-princess-kaguya-film.png" },
+      { key: "r:media/the-wind-rises", name: "The Wind Rises", group: "Posters & box art", img: "img/media/the-wind-rises.png" },
+      { key: "r:art/arrietty", name: "Arrietty", group: "Artwork", img: "img/art/arrietty.png" },
+      { key: "r:art/from-up-on-poppy-hill", name: "From Up On Poppy Hill", group: "Artwork", img: "img/art/from-up-on-poppy-hill.png" },
+      { key: "r:art/ocean-waves", name: "Ocean Waves", group: "Artwork", img: "img/art/ocean-waves.png" },
+      { key: "r:art/only-yesterday", name: "Only Yesterday", group: "Artwork", img: "img/art/only-yesterday.png" },
+      { key: "r:art/porco-rosso", name: "Porco Rosso", group: "Artwork", img: "img/art/porco-rosso.png" },
+      { key: "r:art/tales-from-earthsea", name: "Tales From Earthsea", group: "Artwork", img: "img/art/tales-from-earthsea.png" },
+      { key: "r:art/the-boy-and-the-heron", name: "The Boy And The Heron", group: "Artwork", img: "img/art/the-boy-and-the-heron.png" },
+      { key: "r:art/the-red-turtle", name: "The Red Turtle", group: "Artwork", img: "img/art/the-red-turtle.png" },
+      { key: "r:art/when-marnie-was-there", name: "When Marnie Was There", group: "Artwork", img: "img/art/when-marnie-was-there.png" },
+      { key: "r:art/whisper-of-the-heart", name: "Whisper Of The Heart", group: "Artwork", img: "img/art/whisper-of-the-heart.png" }
+    ];
+// <<<GEN:CATALOG<<<
+
+    var byKey = {};
+    CATALOG.forEach(function (c) { byKey[c.key] = c; });
+
+    function defaultCfg() {
+      return {
+        sel: CATALOG.filter(function (c) { return c.key.charAt(0) === 'b'; })
+                    .map(function (c) { return c.key; }),
+        shuffle: false, rotateMin: 30, shake: true,
+        clockPos: 2, timeFmt: 0, seconds: 0,
+        tempUnit: 'c', font: 0, fontAll: 1, fontSize: 1, color: 0, bg: 0,
+        grid: [{ k: 'date', pos: 8 }, { k: 'spin', pos: 9 }],
+        overrides: {}, cursor: 0
+      };
+    }
+
+    var cfg;
+    try {
+      var raw = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
+      cfg = raw ? JSON.parse(raw) : defaultCfg();
+      var d = defaultCfg();
+      for (var k in d) {
+        if (d.hasOwnProperty(k) && cfg[k] === undefined && k !== 'grid') { cfg[k] = d[k]; }
+      }
+      if (!cfg.sel.length) { cfg.sel = d.sel; }
+      // Toggle-era config from an older PKJS: enabled points migrate to the
+      // cell under the clock, in the old fixed order.
+      if (!cfg.grid) {
+        var under = cfg.clockPos * 3 + 2;
+        cfg.grid = [];
+        [['date', cfg.showDate], ['batt', cfg.showBatt], ['steps', cfg.showSteps],
+         ['temp', cfg.showTemp], ['hr', cfg.showHr]].forEach(function (p) {
+          if (p[1]) { cfg.grid.push({ k: p[0], pos: under }); }
+        });
+        delete cfg.showDate; delete cfg.showBatt; delete cfg.showSteps;
+        delete cfg.showTemp; delete cfg.showHr;
+      }
+      // The catalog changes across releases; saved overrides outlive it.
+      Object.keys(cfg.overrides || {}).forEach(function (ref) {
+        if (!byKey[ref]) { delete cfg.overrides[ref]; }
+      });
+    } catch (e) { cfg = defaultCfg(); }
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    // --- Hand-built segmented controls (one per config field) ---------------
+    // opts: [[value, label, extraClass?], ...]. `asText` keeps the stored value
+    // a string (tempUnit); every other field stores an int, exactly the values
+    // the watchface expects.
+    function segment(hostId, prop, opts, asText) {
+      var host = $(hostId), syncs = [];
+      function refresh() { for (var i = 0; i < syncs.length; i++) { syncs[i](); } }
+      opts.forEach(function (o) {
+        var val = asText ? o[0] : parseInt(o[0], 10);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pill' + (o[2] ? ' ' + o[2] : '');
+        b.setAttribute('role', 'radio');
+        b.textContent = o[1];
+        host.appendChild(b);
+        syncs.push(function () {
+          var on = asText ? (cfg[prop] === val) : (parseInt(cfg[prop], 10) === val);
+          b.className = 'pill' + (o[2] ? ' ' + o[2] : '') + (on ? ' on' : '');
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        b.addEventListener('click', function () {
+          cfg[prop] = val;
+          refresh();
+          updatePreview();
+        });
+      });
+      refresh();
+    }
+
+    // --- Image grid, grouped ------------------------------------------------
+    var GROUPS = [];
+    CATALOG.forEach(function (c) { if (GROUPS.indexOf(c.group) < 0) { GROUPS.push(c.group); } });
+
+    var LEAF = '<svg class="bundle" viewBox="0 0 20 18"><use href="#leaf"/></svg>';
+
+    // Catalogue names carry film-title boilerplate; trim it for the caption
+    // only (the full name stays in the tooltip / alt text).
+    function shortName(n) {
+      return n.replace(/\s+Film$/i, '')
+              .replace(/\s+Key Art$/i, '')
+              .replace(/^Nausicaa Of The Valley Of The Wind$/i, 'Nausicaä Valley')
+              .replace(/^Nausicaa$/i, 'Nausicaä')
+              .replace(/^Kikis Delivery Service$/i, "Kiki's Delivery")
+              .replace(/^Grave Of The Fireflies$/i, 'Grave of Fireflies')
+              .replace(/^Howls Moving Castle$/i, "Howl's Castle")
+              .replace(/^From Up On Poppy Hill$/i, 'Up on Poppy Hill')
+              .replace(/^The Boy And The Heron$/i, 'Boy & the Heron')
+              .replace(/^When Marnie Was There$/i, 'When Marnie')
+              .replace(/^Castle In The Sky$/i, 'Castle in the Sky')
+              .replace(/\bOf The\b/g, 'of the')
+              .replace(/\bAnd The\b/g, 'and the') || n;
+    }
+
+    function renderGroups() {
+      var root = $('groups');
+      root.innerHTML = '';
+      GROUPS.forEach(function (group) {
+        var items = CATALOG.filter(function (c) { return c.group === group; });
+
+        var head = document.createElement('div'); head.className = 'grouphead';
+        var h = document.createElement('h3'); h.textContent = group;
+        var n = document.createElement('span'); n.className = 'n';
+        var bulk = document.createElement('div'); bulk.className = 'bulk';
+        var all = document.createElement('a'); all.textContent = 'all';
+        var none = document.createElement('a'); none.textContent = 'none';
+        all.addEventListener('click', function () {
+          items.forEach(function (c) { if (cfg.sel.indexOf(c.key) < 0) { cfg.sel.push(c.key); } });
+          renderGroups(); updateStatus();
+        });
+        none.addEventListener('click', function () {
+          cfg.sel = cfg.sel.filter(function (k) { return !byKey[k] || byKey[k].group !== group; });
+          renderGroups(); updateStatus();
+        });
+        bulk.appendChild(all); bulk.appendChild(none);
+        head.appendChild(h); head.appendChild(n); head.appendChild(bulk);
+        root.appendChild(head);
+
+        var grid = document.createElement('div'); grid.className = 'gallery';
+        items.forEach(function (c) {
+          var bundled = c.key.charAt(0) === 'b';
+          var on = cfg.sel.indexOf(c.key) >= 0;
+          var cell = document.createElement('div');
+          cell.className = 'cell' + (on ? ' on' : '');
+
+          var frame = document.createElement('div'); frame.className = 'frame';
+          var im = document.createElement('img');
+          im.src = c.img; im.alt = c.name; im.loading = 'lazy';
+          im.title = c.name + (bundled ? ' (bundled on watch)' : ' (streamed from phone)');
+          frame.appendChild(im);
+          frame.insertAdjacentHTML('beforeend', '<span class="tick"></span>');
+          if (bundled) { frame.insertAdjacentHTML('beforeend', LEAF); }
+          cell.appendChild(frame);
+
+          var cap = document.createElement('span');
+          cap.className = 'name'; cap.textContent = shortName(c.name);
+          cell.appendChild(cap);
+
+          cell.addEventListener('click', function () {
+            var at = cfg.sel.indexOf(c.key);
+            if (at >= 0) { cfg.sel.splice(at, 1); }
+            else { cfg.sel.push(c.key); setPreviewImage(c); }
+            if (openSheetFor === c.key) { openSheetFor = null; }
+            renderGroups(); updateStatus();
+          });
+          if (on) {
+            // Pencil badge: a look for this image only (per-image override).
+            var ob = document.createElement('button');
+            ob.type = 'button';
+            ob.className = 'ovbtn' + (cfg.overrides[c.key] ? ' marked' : '');
+            ob.textContent = '✎'; ob.title = 'Look for this image only';
+            ob.addEventListener('click', function (e) {
+              e.stopPropagation();
+              openSheetFor = openSheetFor === c.key ? null : c.key;
+              renderGroups();
+            });
+            cell.appendChild(ob);
+          }
+          grid.appendChild(cell);
+          if (openSheetFor === c.key) { grid.appendChild(ovSheet(c)); }
+        });
+        root.appendChild(grid);
+      });
+      updateCounts();
+    }
+
+    // Per-group "n / m" pill, refreshed on every toggle.
+    function updateCounts() {
+      var pills = $('groups').querySelectorAll('.grouphead .n');
+      GROUPS.forEach(function (group, i) {
+        if (!pills[i]) { return; }
+        var items = CATALOG.filter(function (c) { return c.group === group; });
+        var on = items.filter(function (c) { return cfg.sel.indexOf(c.key) >= 0; }).length;
+        pills[i].textContent = on + ' / ' + items.length;
+      });
+    }
+
+    // --- Live preview --------------------------------------------------------
+
+    // Preview + grid placement + control binding: shared logic
+    // (face-config.js attachGrid); this page keeps its own design and only
+    // hands the behavior to the shared module.
+    var openSheetFor = null;  // key of the open per-image override sheet
+    var ui = FaceConfig.attachGrid(cfg, {
+      list: document.getElementById('dplist'),
+      onChange: function () {
+        $('unitrow').style.display = ui && ui.has('temp') ? '' : 'none';
+      }
+    });
+    var setPreviewImage = ui.setPreviewImage;
+    var bindSwitch = ui.bindSwitch;
+    function updatePreview() { ui.render(); applyHex(); }
+
+    function updateStatus() {
+      var bundled = cfg.sel.filter(function (k) { return k.charAt(0) === 'b'; }).length;
+      $('status').innerHTML = '<b>' + cfg.sel.length + '</b> images in rotation &middot; ' +
+        bundled + ' bundled &middot; ' + (cfg.sel.length - bundled) + ' streamed';
+    }
+
+    // --- Wiring ---------------------------------------------------------------
+
+    segment('rotate', 'rotateMin', [
+      ['1', '1 min'], ['5', '5 min'], ['15', '15 min'], ['30', '30 min'],
+      ['60', '1 hour'], ['180', '3 hours'], ['1440', 'Daily'], ['0', 'Never — shake only', 'wide']
+    ]);
+    segment('clockpos', 'clockPos', [['0', 'Top'], ['1', 'Middle'], ['2', 'Bottom']]);
+    segment('timefmt', 'timeFmt', [['0', 'Auto'], ['1', '12h'], ['2', '24h']]);
+    segment('bg', 'bg', [['0', 'Shadow'], ['1', 'Solid bar'], ['2', 'None']]);
+    segment('fontsize', 'fontSize', [['0', 'Small'], ['1', 'Medium'], ['2', 'Large']]);
+    segment('tempunit', 'tempUnit', [['f', '°F'], ['c', '°C']], true);
+
+    // Style pills: ten watch styles, each previewing its own face.
+    (function () {
+      var host = $('font'), syncs = [];
+      var STYLES = [['0', 'Bold'], ['1', 'Light'], ['2', 'Digital'], ['3', 'Pixel'],
+                    ['4', 'Script'], ['5', 'Typewr.'], ['6', 'Neon'], ['7', 'Poster'],
+                    ['8', 'Stencil'], ['9', 'LCD']];
+      function refresh() { for (var i = 0; i < syncs.length; i++) { syncs[i](); } }
+      STYLES.forEach(function (o) {
+        var val = parseInt(o[0], 10);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pill fontpill fs' + o[0];
+        b.setAttribute('role', 'radio');
+        b.innerHTML = '<span class="t">10:08</span><small></small>';
+        b.querySelector('small').textContent = o[1];
+        host.appendChild(b);
+        syncs.push(function () {
+          var on = parseInt(cfg.font, 10) === val;
+          b.classList.toggle('on', on);
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        b.addEventListener('click', function () {
+          cfg.font = val;
+          refresh();
+          updatePreview();
+        });
+      });
+      refresh();
+    })();
+
+    bindSwitch('shake', 'shake');
+    bindSwitch('shuffle', 'shuffle');
+
+    // Seconds + style-the-data-points ride int fields behind switches.
+    function intSwitch(id, prop) {
+      var el = $(id);
+      el.checked = !!cfg[prop];
+      el.addEventListener('change', function () {
+        cfg[prop] = el.checked ? 1 : 0;
+        updatePreview();
+      });
+    }
+    intSwitch('secondssw', 'seconds');
+    intSwitch('fontallsw', 'fontAll');
+
+    // --- The 64 colors Emery can actually show (2 bits per channel). --------
+    var PAL = ['#000000', '#555555', '#aaaaaa', '#ffffff', '#550000', '#aa0000',
+      '#aa5555', '#ff0000', '#ff5555', '#ffaaaa', '#aa5500', '#ff5500', '#ffaa00',
+      '#ffaa55', '#555500', '#aaaa00', '#aaaa55', '#ffff00', '#ffff55', '#ffffaa',
+      '#55aa00', '#55ff00', '#aaff00', '#aaff55', '#005500', '#00aa00', '#00ff00',
+      '#55aa55', '#55ff55', '#aaffaa', '#00aa55', '#00ff55', '#00ffaa', '#55ffaa',
+      '#005555', '#00aaaa', '#00ffff', '#55aaaa', '#55ffff', '#aaffff', '#0055aa',
+      '#0055ff', '#00aaff', '#55aaff', '#000055', '#0000aa', '#0000ff', '#5555aa',
+      '#5555ff', '#aaaaff', '#5500aa', '#5500ff', '#aa00ff', '#aa55ff', '#550055',
+      '#aa00aa', '#aa55aa', '#ff00ff', '#ff55ff', '#ffaaff', '#aa0055', '#ff0055',
+      '#ff00aa', '#ff55aa'];
+    var pop = $('palpop'), palgrid = $('palgrid'), onPickCb = null;
+    PAL.forEach(function (hex) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.style.background = hex; b.dataset.hex = hex; b.title = hex;
+      b.addEventListener('click', function () {
+        if (onPickCb) { onPickCb(hex); }
+        pop.classList.remove('show');
+      });
+      palgrid.appendChild(b);
+    });
+    function openPalette(title, current, onPick) {
+      $('paltitle').textContent = title;
+      Array.prototype.forEach.call(palgrid.children, function (c) {
+        c.classList.toggle('on', c.dataset.hex === current);
+      });
+      onPickCb = onPick;
+      pop.classList.add('show');
+    }
+    $('palcancel').addEventListener('click', function () { pop.classList.remove('show'); });
+    pop.addEventListener('click', function (e) { if (e.target === pop) { pop.classList.remove('show'); } });
+
+    // --- Ink: one well, tap opens the palette. White/black ride the legacy
+    // 0/1 wire (cfg.color); anything else stores cfg.inkHex (S_INK_COLOR).
+    function lum(hex) {
+      return (parseInt(hex.slice(1, 3), 16) * 3 + parseInt(hex.slice(3, 5), 16) * 6 + parseInt(hex.slice(5, 7), 16)) / 2550;
+    }
+    function inkHex() { return cfg.inkHex || (cfg.color === 1 ? '#000000' : '#ffffff'); }
+    var inkWell = document.createElement('button');
+    inkWell.type = 'button'; inkWell.className = 'well'; inkWell.title = 'Ink colour';
+    var inkHint = document.createElement('span');
+    inkHint.className = 'wellhint'; inkHint.textContent = 'tap to choose · 64 colours';
+    $('inkwells').appendChild(inkWell); $('inkwells').appendChild(inkHint);
+    function paintInk() { inkWell.style.background = inkHex(); }
+    inkWell.addEventListener('click', function () {
+      openPalette('Ink · 64 Pebble colours', inkHex(), function (hex) {
+        if (hex === '#ffffff' || hex === '#000000') { delete cfg.inkHex; }
+        else { cfg.inkHex = hex; }
+        cfg.color = lum(hex) >= 0.5 ? 0 : 1;
+        updatePreview();
+      });
+    });
+
+    // --- Bar colour: AUTO keeps the inverse-of-ink; a well overrides. -------
+    var autoBtn = document.createElement('button');
+    autoBtn.type = 'button'; autoBtn.className = 'autochip'; autoBtn.textContent = 'AUTO';
+    autoBtn.title = 'Inverse of the ink colour';
+    var barWell = document.createElement('button');
+    barWell.type = 'button'; barWell.className = 'well'; barWell.title = 'Bar colour';
+    $('barwells').appendChild(autoBtn); $('barwells').appendChild(barWell);
+    $('barwells').style.display = 'flex';
+    function paintBar() {
+      autoBtn.classList.toggle('on', !cfg.barHex);
+      barWell.style.background = cfg.barHex || (lum(inkHex()) >= 0.5 ? '#000000' : '#ffffff');
+    }
+    autoBtn.addEventListener('click', function () { delete cfg.barHex; updatePreview(); });
+    barWell.addEventListener('click', function () {
+      openPalette('Bar · 64 Pebble colours', cfg.barHex || '', function (hex) {
+        cfg.barHex = hex; updatePreview();
+      });
+    });
+    function syncBarVis() { $('barrow').classList.toggle('show', parseInt(cfg.bg, 10) === 1); }
+
+    // --- Preview tint: re-apply hex colours after the shared preview runs. --
+    function applyHex() {
+      var ovl = document.getElementById('ovl');
+      var ink = inkHex();
+      if (cfg.inkHex) {
+        ovl.style.color = ink;
+        document.querySelectorAll('#watch .stack').forEach(function (s) { s.style.color = ink; });
+      }
+      if (parseInt(cfg.bg, 10) === 1 && cfg.barHex) {
+        document.querySelectorAll('#watch .bars div').forEach(function (d) {
+          d.style.background = cfg.barHex;
+        });
+      }
+      paintInk(); paintBar(); syncBarVis();
+    }
+    // Shared code repaints on every change/click; ride the same events.
+    document.addEventListener('change', function () { setTimeout(applyHex, 0); }, true);
+    document.addEventListener('click', function () { setTimeout(applyHex, 0); }, true);
+
+    // --- Per-image overrides: clock row / ink / backdrop / bar per image. ---
+    function ovOf(ref) { return cfg.overrides[ref] || null; }
+    function setOv(ref, patch) {
+      var o = cfg.overrides[ref] || {};
+      Object.keys(patch).forEach(function (k) {
+        if (patch[k] === null) { delete o[k]; } else { o[k] = patch[k]; }
+      });
+      if (Object.keys(o).length) { cfg.overrides[ref] = o; } else { delete cfg.overrides[ref]; }
+    }
+    function ovSheet(c) {
+      var ref = c.key;
+      var sh = document.createElement('div'); sh.className = 'ovsheet';
+      var o = ovOf(ref) || {};
+      var head = document.createElement('div'); head.className = 'ovhead';
+      head.innerHTML = '<b>This image</b>';
+      var close = document.createElement('button');
+      close.type = 'button'; close.className = 'close'; close.textContent = 'Done';
+      close.addEventListener('click', function () { openSheetFor = null; renderGroups(); });
+      head.appendChild(close); sh.appendChild(head);
+
+      var rowP = document.createElement('div'); rowP.className = 'ovrow';
+      rowP.innerHTML = '<span class="rowcap">Clock</span>';
+      ['Default', 'Top', 'Middle', 'Bottom'].forEach(function (name, i) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'chip'; b.textContent = name;
+        var val = i === 0 ? null : i - 1;
+        b.classList.toggle('on', val === null ? o.pos === undefined : o.pos === val);
+        b.addEventListener('click', function () { setOv(ref, { pos: val }); renderGroups(); });
+        rowP.appendChild(b);
+      });
+      sh.appendChild(rowP);
+
+      var rowI = document.createElement('div'); rowI.className = 'ovrow';
+      rowI.innerHTML = '<span class="rowcap">Ink</span>';
+      var dflt = document.createElement('button');
+      dflt.type = 'button'; dflt.className = 'autochip';
+      dflt.textContent = 'DEFAULT'; dflt.classList.toggle('on', !o.ink);
+      dflt.addEventListener('click', function () { setOv(ref, { ink: null }); renderGroups(); });
+      var well = document.createElement('button');
+      well.type = 'button'; well.className = 'well';
+      well.style.background = o.ink || inkHex();
+      well.addEventListener('click', function () {
+        openPalette('This image · ink', o.ink || inkHex(), function (hex) {
+          setOv(ref, { ink: hex }); renderGroups();
+        });
+      });
+      rowI.appendChild(dflt); rowI.appendChild(well);
+      sh.appendChild(rowI);
+
+      var rowT = document.createElement('div'); rowT.className = 'ovrow';
+      rowT.innerHTML = '<span class="rowcap">Backdrop</span>';
+      [['Default', null], ['Shadow', 0], ['Solid bar', 1], ['None', 2]].forEach(function (opt) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'chip'; b.textContent = opt[0];
+        var val = opt[1];
+        b.classList.toggle('on', val === null ? o.bg === undefined : o.bg === val);
+        b.addEventListener('click', function () { setOv(ref, { bg: val }); renderGroups(); });
+        rowT.appendChild(b);
+      });
+      sh.appendChild(rowT);
+
+      var rowB = document.createElement('div'); rowB.className = 'ovrow';
+      rowB.innerHTML = '<span class="rowcap">Bar</span>';
+      var bDflt = document.createElement('button');
+      bDflt.type = 'button'; bDflt.className = 'autochip';
+      bDflt.textContent = 'DEFAULT'; bDflt.classList.toggle('on', !o.bar);
+      bDflt.addEventListener('click', function () { setOv(ref, { bar: null }); renderGroups(); });
+      var bWell = document.createElement('button');
+      bWell.type = 'button'; bWell.className = 'well';
+      bWell.style.background = o.bar || (cfg.barHex || (lum(inkHex()) >= 0.5 ? '#000000' : '#ffffff'));
+      bWell.addEventListener('click', function () {
+        openPalette('This image · bar colour', o.bar || cfg.barHex || '', function (hex) {
+          setOv(ref, { bar: hex }); renderGroups();
+        });
+      });
+      rowB.appendChild(bDflt); rowB.appendChild(bWell);
+      sh.appendChild(rowB);
+      return sh;
+    }
+
+    $('save').addEventListener('click', function () {
+      delete cfg.bag;
+      PebbleImage.closeConfig(cfg);
+    });
+    // Discard: reload restores the exact config the page was opened with
+    // (it lives in the URL hash), throwing away every unsaved change.
+    $('discard').addEventListener('click', function () { location.reload(); });
+
+    // Sticky save bar: appears once the config differs from what PKJS sent.
+    // Baseline is captured AFTER the fills/migrations above, so opening the
+    // page never counts as an edit; polling beats instrumenting every
+    // mutation site, and stringify of the config is ~ms.
+    (function () {
+      var savebar = $('savebar');
+      var baseline = null;
+      setTimeout(function () { baseline = JSON.stringify(cfg); }, 0);
+      setInterval(function () {
+        if (baseline === null) { return; }
+        savebar.classList.toggle('dirty', JSON.stringify(cfg) !== baseline);
+      }, 700);
+    })();
+
+    renderGroups();
+    updateStatus();
+    $('unitrow').style.display = ui.has('temp') ? '' : 'none';
+    updatePreview();
+    setPreviewImage(byKey[cfg.sel[0]] || CATALOG[0]);
+  </script>
+</body>
+</html>

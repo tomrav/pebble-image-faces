@@ -1,0 +1,130 @@
+/*
+ * "Glass" color theme for Pebble settings pages — turquoise / cyan / grass,
+ * frosted translucent cards floating over an aqua gradient. Works in light and
+ * dark (follows the phone via prefers-color-scheme, and honors an explicit
+ * [data-theme]). Load AFTER Pico and theme.css; it only sets colors + surfaces,
+ * leaning on Pico's --pico-* variables so framework components pick it up.
+ */
+
+/* ---- Light (default) ---- */
+:root {
+  color-scheme: light dark;
+
+  --glass-bg: #e9f7f3;
+  --glass-gradient:
+    radial-gradient(1100px 560px at 84% -12%, #b9f0e4 0%, transparent 58%),
+    radial-gradient(820px 480px at -8% 4%, #cdf2ff 0%, transparent 55%),
+    linear-gradient(170deg, #eafaf5 0%, #def6ef 100%);
+  --glass-surface: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(13, 124, 112, 0.20);
+  --glass-shadow: 0 12px 32px -14px rgba(8, 80, 74, 0.38);
+  --glass-blur: blur(14px) saturate(150%);
+
+  --pico-primary: #0c8d7f;
+  --pico-primary-background: #0c8d7f;
+  --pico-primary-border: #0c8d7f;
+  --pico-primary-hover: #0a7568;
+  --pico-primary-hover-background: #0a7568;
+  --pico-primary-hover-border: #0a7568;
+  --pico-primary-focus: rgba(15, 184, 166, 0.35);
+  --pico-primary-inverse: #ffffff;
+  --pico-primary-underline: rgba(12, 141, 127, 0.5);
+
+  --pico-color: #0b302b;
+  --pico-h1-color: #07332e;
+  --pico-h2-color: #07332e;
+  --pico-h3-color: #07332e;
+  --pico-background-color: var(--glass-bg);
+  --pico-card-background-color: var(--glass-surface);
+  --pico-card-border-color: var(--glass-border);
+  --pico-card-box-shadow: var(--glass-shadow);
+  --pico-muted-color: #4d6b66;
+  --pico-muted-border-color: var(--glass-border);
+  --pico-form-element-background-color: rgba(255, 255, 255, 0.6);
+  --pico-form-element-border-color: var(--glass-border);
+  --pico-form-element-active-background-color: rgba(255, 255, 255, 0.85);
+  --pico-switch-background-color: rgba(13, 124, 112, 0.22);
+}
+
+/* ---- Dark ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --glass-bg: #06171a;
+    --glass-gradient:
+      radial-gradient(1100px 560px at 84% -12%, rgba(20, 184, 166, 0.26) 0%, transparent 58%),
+      radial-gradient(820px 480px at -8% 4%, rgba(6, 182, 212, 0.22) 0%, transparent 55%),
+      linear-gradient(170deg, #07201f 0%, #051417 100%);
+    --glass-surface: rgba(16, 46, 47, 0.46);
+    --glass-border: rgba(125, 232, 216, 0.18);
+    --glass-shadow: 0 16px 44px -18px rgba(0, 0, 0, 0.65);
+
+    --pico-primary: #2dd4bf;
+    --pico-primary-background: #16bda9;
+    --pico-primary-border: #16bda9;
+    --pico-primary-hover: #44e3cf;
+    --pico-primary-hover-background: #1fd0bb;
+    --pico-primary-hover-border: #1fd0bb;
+    --pico-primary-focus: rgba(45, 212, 191, 0.35);
+    --pico-primary-inverse: #04201d;
+    --pico-primary-underline: rgba(45, 212, 191, 0.5);
+
+    --pico-color: #d8f5ef;
+    --pico-h1-color: #ecfbf7;
+    --pico-h2-color: #ecfbf7;
+    --pico-h3-color: #ecfbf7;
+    --pico-muted-color: #93bcb5;
+    --pico-form-element-background-color: rgba(9, 28, 30, 0.5);
+    --pico-form-element-active-background-color: rgba(9, 28, 30, 0.75);
+    --pico-switch-background-color: rgba(125, 232, 216, 0.20);
+  }
+}
+
+[data-theme="dark"] {
+  --glass-bg: #06171a;
+  --glass-gradient:
+    radial-gradient(1100px 560px at 84% -12%, rgba(20, 184, 166, 0.26) 0%, transparent 58%),
+    radial-gradient(820px 480px at -8% 4%, rgba(6, 182, 212, 0.22) 0%, transparent 55%),
+    linear-gradient(170deg, #07201f 0%, #051417 100%);
+  --glass-surface: rgba(16, 46, 47, 0.46);
+  --glass-border: rgba(125, 232, 216, 0.18);
+  --glass-shadow: 0 16px 44px -18px rgba(0, 0, 0, 0.65);
+
+  --pico-primary: #2dd4bf;
+  --pico-primary-background: #16bda9;
+  --pico-primary-border: #16bda9;
+  --pico-primary-hover: #44e3cf;
+  --pico-primary-hover-background: #1fd0bb;
+  --pico-primary-hover-border: #1fd0bb;
+  --pico-primary-focus: rgba(45, 212, 191, 0.35);
+  --pico-primary-inverse: #04201d;
+  --pico-primary-underline: rgba(45, 212, 191, 0.5);
+
+  --pico-color: #d8f5ef;
+  --pico-h1-color: #ecfbf7;
+  --pico-h2-color: #ecfbf7;
+  --pico-h3-color: #ecfbf7;
+  --pico-muted-color: #93bcb5;
+  --pico-form-element-background-color: rgba(9, 28, 30, 0.5);
+  --pico-form-element-active-background-color: rgba(9, 28, 30, 0.75);
+  --pico-switch-background-color: rgba(125, 232, 216, 0.20);
+}
+
+/* ---- Surfaces ---- */
+body {
+  background: var(--glass-gradient) no-repeat fixed;
+  background-color: var(--glass-bg);
+  min-height: 100vh;
+}
+
+/* Frosted glass gallery cards. The translucent fill is a graceful fallback
+   where backdrop-filter isn't supported. */
+article {
+  background: var(--glass-surface);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* The watch preview sits like a pane of glass too. */
+#preview { box-shadow: var(--glass-shadow); }

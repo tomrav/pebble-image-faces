@@ -1,0 +1,126 @@
+{
+  "categories": [
+    {
+      "slug": "animals",
+      "name": "Animals",
+      "images": [
+        {
+          "file": "animals-1",
+          "title": "Lion"
+        },
+        {
+          "file": "animals-2",
+          "title": "Tiger"
+        },
+        {
+          "file": "animals-3",
+          "title": "Elephant"
+        },
+        {
+          "file": "animals-4",
+          "title": "Giraffe"
+        },
+        {
+          "file": "animals-5",
+          "title": "Red fox"
+        }
+      ]
+    },
+    {
+      "slug": "space",
+      "name": "Space",
+      "images": [
+        {
+          "file": "space-1",
+          "title": "The Moon"
+        },
+        {
+          "file": "space-2",
+          "title": "Nebula"
+        },
+        {
+          "file": "space-3",
+          "title": "Rocket launch"
+        }
+      ]
+    },
+    {
+      "slug": "architecture",
+      "name": "Architecture",
+      "images": [
+        {
+          "file": "architecture-1",
+          "title": "Spiral staircase"
+        },
+        {
+          "file": "architecture-2",
+          "title": "Cathedral interior"
+        },
+        {
+          "file": "architecture-3",
+          "title": "Skyscraper"
+        },
+        {
+          "file": "architecture-4",
+          "title": "Pagoda"
+        },
+        {
+          "file": "architecture-5",
+          "title": "Suspension bridge"
+        }
+      ]
+    },
+    {
+      "slug": "transport",
+      "name": "Transportation",
+      "images": [
+        {
+          "file": "transport-1",
+          "title": "Hot air balloon"
+        },
+        {
+          "file": "transport-2",
+          "title": "Bicycle"
+        },
+        {
+          "file": "transport-3",
+          "title": "Vintage car"
+        },
+        {
+          "file": "transport-4",
+          "title": "Steam train"
+        },
+        {
+          "file": "transport-5",
+          "title": "Airplane"
+        }
+      ]
+    },
+    {
+      "slug": "flora",
+      "name": "Flora",
+      "images": [
+        {
+          "file": "flora-1",
+          "title": "Cherry blossom"
+        },
+        {
+          "file": "flora-2",
+          "title": "Sunflower"
+        },
+        {
+          "file": "flora-3",
+          "title": "Rose"
+        },
+        {
+          "file": "flora-4",
+          "title": "Bamboo forest"
+        },
+        {
+          "file": "flora-5",
+          "title": "Cactus"
+        }
+      ]
+    }
+  ]
+}

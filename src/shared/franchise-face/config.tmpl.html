@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<!--
+  __FACE_TITLE__ settings page — hosted on Cloudflare Pages, opened by the
+  watchface via Pebble.openURL with the current config in the URL hash.
+  GENERATED from src/shared/franchise-face/config.tmpl.html by
+  scripts/gen-franchise-faces.mjs — edit the template, not this copy.
+
+  Pick which images rotate, how often, and how the overlay looks: the clock
+  (position, 12/24h, seconds, one of ten styles), data points placed on a
+  3x3 grid, ink/bar colors from the 64-color Pebble palette, and per-image
+  look overrides. On Save the whole config returns to PKJS, which persists
+  it and serves the watch. This is the reference implementation of
+  PAGE_CONTRACT.md; the overlay controls are ported from photo-face's page.
+  Local testing: serve docs/ and open /faces/__FACE_ID__/config.html
+  (optionally with a #<encoded-config> hash).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>__FACE_TITLE__</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Permanent+Marker&family=Special+Elite&family=Monoton&family=Abril+Fatface&family=Black+Ops+One&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css">
+  <link rel="stylesheet" href="../../shared/theme.css?v=20260730a">
+  <link rel="stylesheet" href="../../shared/theme-glass.css?v=20260730a">
+  <link rel="stylesheet" href="../../shared/face-ui.css?v=20260901a">
+  <style>
+    hgroup h1 { margin-bottom: var(--space-3); }
+    h2 { font-size: 1.1rem; margin: var(--space-5) 0 var(--space-3); }
+    .grouphead { display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-4) 0 var(--space-2); }
+    .grouphead h3 { font-size: .95rem; margin: 0; }
+    .grouphead .bulk { margin-left: auto; display: flex; gap: var(--space-2); }
+    .grouphead .bulk a { font-size: .8rem; cursor: pointer; }
+    .gallery { display: grid; grid-template-columns: repeat(var(--gallery-cols), 1fr); gap: var(--grid-gap); margin: 0 0 var(--space-3); }
+    .gallery .cell { position: relative; cursor: pointer; }
+    .gallery img {
+      width: 100%; aspect-ratio: var(--thumb-ratio); object-fit: cover; border-radius: var(--thumb-radius);
+      border: var(--thumb-border) solid transparent; transition: border-color .15s ease, opacity .15s ease;
+      opacity: .45; display: block;
+    }
+    .gallery .cell.on img { border-color: var(--pico-primary); opacity: 1; }
+    .gallery .cell::after {
+      content: ""; position: absolute; top: 4px; right: 4px; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--pico-primary); opacity: 0; transition: opacity .15s ease;
+    }
+    .gallery .cell.on::after { opacity: 1; }
+    .row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: 0 0 var(--space-3); }
+    .row label { margin: 0; white-space: nowrap; }
+    .row select { width: auto; margin: 0; }
+    .switches { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-2); margin-bottom: var(--space-3); }
+    .switches label { margin: 0; }
+    figure { margin: var(--space-5) 0 var(--space-3); text-align: center; }
+    figcaption { margin-bottom: var(--space-3); color: var(--pico-muted-color); font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+    #gridhint { margin: var(--space-2) 0 0; text-align: center; color: var(--pico-muted-color); }
+    #status { display: block; text-align: center; margin: var(--space-2) 0 var(--space-3); color: var(--pico-muted-color); }
+    #save { display: block; width: fit-content; min-width: 9rem; margin: var(--space-3) auto 0; }
+    /* Style previews for the custom watch fonts (0-4 come from face-ui.css). */
+    #ovl.f5 .clk { font-family: "Special Elite", serif; font-weight: 400; font-size: 34px; }
+    #ovl.f6 .clk { font-family: "Monoton", cursive; font-weight: 400; font-size: 32px; }
+    #ovl.f7 .clk { font-family: "Abril Fatface", serif; font-weight: 400; font-size: 36px; }
+    #ovl.f8 .clk { font-family: "Black Ops One", cursive; font-weight: 400; font-size: 31px; }
+    #ovl.f9 .clk { font-family: "DSEG7-Classic", monospace; font-weight: 400; font-size: 27px; }
+    #watch .cells.if5 .stack { font-family: "Special Elite", serif; font-size: 15px; }
+    #watch .cells.if7 .stack { font-family: "Abril Fatface", serif; font-size: 15px; }
+    #watch .cells.if8 .stack { font-family: "Black Ops One", cursive; font-size: 13px; }
+    /* Color wells: tap to open the 64-color Pebble palette. */
+    .well {
+      margin: 0; padding: 0; width: 30px; height: 30px; border-radius: 50%; flex: none;
+      border: 2px solid color-mix(in srgb, var(--pico-primary) 55%, transparent);
+      cursor: pointer;
+    }
+    .wellhint { font-size: .72rem; color: var(--pico-muted-color); }
+    .autochip {
+      margin: 0; width: auto; padding: .3rem .6rem; font-size: .7rem; font-weight: 700;
+      letter-spacing: .1em; color: var(--pico-muted-color); background: transparent;
+      border: 1.5px solid var(--pico-muted-border-color); border-radius: 9px; cursor: pointer;
+    }
+    .autochip.on { color: var(--pico-primary); border-color: var(--pico-primary); }
+    #barrow { display: none; }
+    #barrow.show { display: flex; }
+    /* 64-color palette picker (all colors Emery can actually show). */
+    #palpop {
+      position: fixed; inset: 0; z-index: 60; display: none;
+      background: rgba(0, 0, 0, .55); align-items: center; justify-content: center;
+    }
+    #palpop.show { display: flex; }
+    #palpop .card {
+      background: var(--pico-card-background-color, #fff);
+      border: 1px solid var(--pico-muted-border-color); border-radius: 14px;
+      padding: 16px 16px 12px; max-width: 330px;
+    }
+    #palpop h3 { margin: 0 0 10px; font-size: .8rem; letter-spacing: .16em; text-transform: uppercase; }
+    #palpop .grid { display: grid; grid-template-columns: repeat(8, 30px); gap: 6px; }
+    #palpop .grid button {
+      margin: 0; padding: 0; width: 30px; height: 30px; border-radius: 7px;
+      border: 1.5px solid rgba(127,127,127,.35); cursor: pointer;
+    }
+    #palpop .grid button.on { outline: 3px solid var(--pico-primary); outline-offset: 1px; }
+    #palpop .foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+    #palpop .foot button { margin: 0; width: auto; padding: .35rem .9rem; font-size: .8rem; }
+    /* Per-image override: pencil badge on selected thumbs + inline sheet. */
+    .gallery .cell .ovbtn {
+      position: absolute; left: 4px; bottom: 4px; width: 30px; height: 30px; margin: 0; padding: 0;
+      font-size: 15px; line-height: 1; border-radius: 8px; cursor: pointer;
+      background: rgba(0, 0, 0, .6); color: #fff; border: 1px solid rgba(255,255,255,.4);
+    }
+    .gallery .cell .ovbtn.marked { background: var(--pico-primary); border-color: var(--pico-primary); }
+    .gallery .ovsheet { grid-column: 1 / -1; }
+    .ovsheet {
+      margin: 4px 0; padding: 10px 12px; border-radius: 10px;
+      border: 1.5px dashed color-mix(in srgb, var(--pico-primary) 55%, transparent);
+    }
+    .ovsheet .ovhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ovsheet .ovhead b { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; }
+    .ovsheet .ovhead .close { margin: 0 0 0 auto; width: auto; padding: .2rem .6rem; font-size: .75rem; }
+    .ovsheet .ovrow { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 5px 0; }
+    .ovsheet .ovrow .rowcap {
+      flex: 0 0 84px; font-size: .68rem; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase; color: var(--pico-muted-color);
+    }
+    .ovsheet .chip {
+      margin: 0; width: auto; padding: .3rem .7rem; font-size: .78rem; font-weight: 600;
+      color: var(--pico-primary); background: transparent;
+      border: 1.5px solid color-mix(in srgb, var(--pico-primary) 45%, transparent);
+      border-radius: 9px; cursor: pointer;
+    }
+    .ovsheet .chip.on {
+      color: var(--pico-primary-inverse); background: var(--pico-primary);
+      border-color: var(--pico-primary);
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <hgroup>
+      <h1>__FACE_TITLE__</h1>
+      <p>Pick the images in rotation and style the overlay. The face changes
+        image on the interval below, and on a wrist shake if enabled.</p>
+    </hgroup>
+
+    <h2>Rotation</h2>
+    <div class="row">
+      <label>New image every</label>
+      <select id="rotate">
+        <option value="1">1 minute</option>
+        <option value="5">5 minutes</option>
+        <option value="15">15 minutes</option>
+        <option value="30">30 minutes</option>
+        <option value="60">1 hour</option>
+        <option value="180">3 hours</option>
+        <option value="1440">once a day</option>
+        <option value="0">never (shake only)</option>
+      </select>
+    </div>
+    <div class="switches">
+      <label><input type="checkbox" role="switch" id="shake"> Shake to advance</label>
+      <label><input type="checkbox" role="switch" id="shuffle"> Shuffle order</label>
+    </div>
+
+    <h2>Clock &amp; overlay</h2>
+    <div class="row">
+      <label>Position</label>
+      <select id="clockpos">
+        <option value="0">Top</option>
+        <option value="1">Middle</option>
+        <option value="2">Bottom</option>
+      </select>
+      <label>Time</label>
+      <select id="timefmt">
+        <option value="0">Auto</option>
+        <option value="1">12h</option>
+        <option value="2">24h</option>
+      </select>
+      <label><input type="checkbox" role="switch" id="secondssw"> Seconds</label>
+    </div>
+    <div class="row">
+      <label>Style</label>
+      <select id="font">
+        <option value="0">Bold</option>
+        <option value="1">Light</option>
+        <option value="2">Digital</option>
+        <option value="3">Pixel</option>
+        <option value="4">Script</option>
+        <option value="5">Typewriter</option>
+        <option value="6">Neon</option>
+        <option value="7">Poster</option>
+        <option value="8">Stencil</option>
+        <option value="9">LCD</option>
+      </select>
+      <label>Size</label>
+      <select id="fontsize">
+        <option value="0">Small</option>
+        <option value="1">Medium</option>
+        <option value="2">Large</option>
+      </select>
+      <label title="Apply the style to the data points too">
+        <input type="checkbox" role="switch" id="fontallsw"> Style the data points
+      </label>
+    </div>
+    <div class="row">
+      <label>Ink</label>
+      <span id="inkwells"></span>
+      <label>Backdrop</label>
+      <select id="bg">
+        <option value="0">Drop shadow</option>
+        <option value="1">Solid bar</option>
+        <option value="2">None</option>
+      </select>
+    </div>
+    <div class="row" id="barrow">
+      <label>Bar color</label>
+      <span id="barwells"></span>
+    </div>
+    <div class="hiddensels" style="display:none">
+      <select id="seconds"><option value="0">Off</option><option value="1">On</option></select>
+      <select id="fontall"><option value="0">Clock only</option><option value="1">Clock + features</option></select>
+      <select id="color"><option value="0">White</option><option value="1">Black</option></select>
+    </div>
+
+    <figure>
+      <figcaption>Preview</figcaption>
+      <div id="watch"><img id="pimg" alt=""><div id="ovl"><div class="clk">10:08</div><div class="inf"></div></div></div>
+    </figure>
+
+    <!-- Every data point is always listed; its button shows where it lives
+         ("Off" = not shown). Items sharing a spot flow side by side. -->
+    <p id="gridhint"><small>Tap a position button, then tap a spot on the
+      watch. Items on the same spot sit side by side.</small></p>
+    <div class="dplist" id="dplist"></div>
+
+    <div class="row" id="unitrow">
+      <label>Temperature unit</label>
+      <select id="tempunit">
+        <option value="f">°F</option>
+        <option value="c">°C</option>
+      </select>
+    </div>
+
+    <h2>Images</h2>
+    <p><small>Tap to add or remove an image from the rotation. Images marked
+      <em>bundled</em> are stored on the watch and show even without your phone;
+      the rest stream from the phone when shown. The ✎ button on a selected
+      image sets a look just for it.</small></p>
+    <div id="groups"></div>
+
+    <div id="palpop" role="dialog" aria-modal="true">
+      <div class="card">
+        <h3 id="paltitle">Pick a color</h3>
+        <div class="grid" id="palgrid"></div>
+        <div class="foot"><button type="button" class="secondary" id="palcancel">Cancel</button></div>
+      </div>
+    </div>
+
+    <small id="status"></small>
+    <button id="save">Save</button>
+  </main>
+
+  <script src="../../shared/pebble-image.js?v=20260906a"></script>
+  <script src="../../shared/face-config.js?v=20260901a"></script>
+  <script>
+    // Every image in the catalog: key ('b:group/slug' bundled, 'r:group/slug'
+    // hosted), display name, group label, thumbnail URL.
+    // >>>GEN:CATALOG>>>
+    // <<<GEN:CATALOG<<<
+
+    var byKey = {};
+    CATALOG.forEach(function (c) { byKey[c.key] = c; });
+
+    function defaultCfg() {
+      return {
+        sel: CATALOG.filter(function (c) { return c.key.charAt(0) === 'b'; })
+                    .map(function (c) { return c.key; }),
+        shuffle: false, rotateMin: 30, shake: true,
+        clockPos: 2, timeFmt: 0, seconds: 0,
+        tempUnit: 'c', font: 0, fontAll: 1, fontSize: 1, color: 0, bg: 0,
+        grid: [{ k: 'date', pos: 8 }, { k: 'spin', pos: 9 }],
+        overrides: {}, cursor: 0
+      };
+    }
+
+    var cfg;
+    try {
+      var raw = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
+      cfg = raw ? JSON.parse(raw) : defaultCfg();
+      var d = defaultCfg();
+      for (var k in d) {
+        if (d.hasOwnProperty(k) && cfg[k] === undefined && k !== 'grid') { cfg[k] = d[k]; }
+      }
+      if (!cfg.sel.length) { cfg.sel = d.sel; }
+      // Toggle-era config from an older PKJS: enabled points migrate to the
+      // cell under the clock, in the old fixed order.
+      if (!cfg.grid) {
+        var under = cfg.clockPos * 3 + 2;
+        cfg.grid = [];
+        [['date', cfg.showDate], ['batt', cfg.showBatt], ['steps', cfg.showSteps],
+         ['temp', cfg.showTemp], ['hr', cfg.showHr]].forEach(function (p) {
+          if (p[1]) { cfg.grid.push({ k: p[0], pos: under }); }
+        });
+        delete cfg.showDate; delete cfg.showBatt; delete cfg.showSteps;
+        delete cfg.showTemp; delete cfg.showHr;
+      }
+      // The catalog changes across releases; saved overrides outlive it.
+      Object.keys(cfg.overrides || {}).forEach(function (ref) {
+        if (!byKey[ref]) { delete cfg.overrides[ref]; }
+      });
+    } catch (e) { cfg = defaultCfg(); }
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    // --- Image grid, grouped, with per-image override sheets -----------------
+    var GROUPS = [];
+    CATALOG.forEach(function (c) { if (GROUPS.indexOf(c.group) < 0) { GROUPS.push(c.group); } });
+    var openSheetFor = null;  // key of the open override sheet
+
+    function renderGroups() {
+      var root = $('groups');
+      root.innerHTML = '';
+      GROUPS.forEach(function (group) {
+        var items = CATALOG.filter(function (c) { return c.group === group; });
+
+        var head = document.createElement('div'); head.className = 'grouphead';
+        var h = document.createElement('h3'); h.textContent = group;
+        var bulk = document.createElement('div'); bulk.className = 'bulk';
+        var all = document.createElement('a'); all.textContent = 'all';
+        var none = document.createElement('a'); none.textContent = 'none';
+        all.addEventListener('click', function () {
+          items.forEach(function (c) { if (cfg.sel.indexOf(c.key) < 0) { cfg.sel.push(c.key); } });
+          renderGroups(); updateStatus();
+        });
+        none.addEventListener('click', function () {
+          cfg.sel = cfg.sel.filter(function (k) { return !byKey[k] || byKey[k].group !== group; });
+          renderGroups(); updateStatus();
+        });
+        bulk.appendChild(all); bulk.appendChild(none);
+        head.appendChild(h); head.appendChild(bulk);
+        root.appendChild(head);
+
+        var grid = document.createElement('div'); grid.className = 'gallery';
+        items.forEach(function (c) {
+          var on = cfg.sel.indexOf(c.key) >= 0;
+          var cell = document.createElement('div');
+          cell.className = 'cell' + (on ? ' on' : '');
+          var im = document.createElement('img');
+          im.src = c.img; im.alt = c.name; im.loading = 'lazy';
+          im.title = c.name + (c.key.charAt(0) === 'b' ? ' (bundled)' : '');
+          cell.appendChild(im);
+          im.addEventListener('click', function () {
+            var at = cfg.sel.indexOf(c.key);
+            if (at >= 0) { cfg.sel.splice(at, 1); }
+            else { cfg.sel.push(c.key); setPreviewImage(c); }
+            if (openSheetFor === c.key) { openSheetFor = null; }
+            renderGroups(); updateStatus();
+          });
+          if (on) {
+            var ob = document.createElement('button');
+            ob.type = 'button';
+            ob.className = 'ovbtn' + (cfg.overrides[c.key] ? ' marked' : '');
+            ob.textContent = '✎'; ob.title = 'Look for this image only';
+            ob.addEventListener('click', function (e) {
+              e.stopPropagation();
+              openSheetFor = openSheetFor === c.key ? null : c.key;
+              renderGroups();
+            });
+            cell.appendChild(ob);
+          }
+          grid.appendChild(cell);
+          if (openSheetFor === c.key) { grid.appendChild(ovSheet(c)); }
+        });
+        root.appendChild(grid);
+      });
+    }
+
+    // --- Live preview + control binding: shared logic (face-config.js) -------
+    // The page keeps its own #watch/#ovl styling; only the behavior is shared.
+    var ui = FaceConfig.attachGrid(cfg, {
+      list: $('dplist'),
+      onChange: function () {
+        $('unitrow').style.display = ui && ui.has('temp') ? '' : 'none';
+      }
+    });
+    var setPreviewImage = ui.setPreviewImage;
+    var bindSelect = ui.bindSelect;
+    var bindSwitch = ui.bindSwitch;
+
+    function updateStatus() {
+      var bundled = cfg.sel.filter(function (k) { return k.charAt(0) === 'b'; }).length;
+      $('status').textContent = cfg.sel.length + ' images in rotation (' + bundled +
+        ' bundled, ' + (cfg.sel.length - bundled) + ' streamed)';
+    }
+
+    // --- Controls wiring (helpers from face-config.js) ------------------------
+    bindSelect('rotate', 'rotateMin');
+    bindSelect('clockpos', 'clockPos');
+    bindSelect('timefmt', 'timeFmt');
+    bindSelect('seconds', 'seconds');
+    bindSelect('font', 'font');
+    bindSelect('fontall', 'fontAll');
+    bindSelect('fontsize', 'fontSize');
+    bindSelect('color', 'color');
+    bindSelect('bg', 'bg');
+    bindSelect('tempunit', 'tempUnit');
+    bindSwitch('shake', 'shake');
+    bindSwitch('shuffle', 'shuffle');
+    $('unitrow').style.display = ui.has('temp') ? '' : 'none';
+
+    // Switch mirrors for the hidden selects (seconds, fontAll).
+    function mirrorSwitch(swId, selId) {
+      var sw = $(swId), sel = $(selId);
+      function sync() { sw.checked = sel.value === '1'; }
+      sw.addEventListener('change', function () {
+        sel.value = sw.checked ? '1' : '0';
+        sel.dispatchEvent(new Event('change'));
+      });
+      sel.addEventListener('change', sync); sync();
+    }
+    mirrorSwitch('secondssw', 'seconds');
+    mirrorSwitch('fontallsw', 'fontall');
+
+    // --- The 64 colors Emery can actually show (2 bits per channel). ---------
+    var PAL = ['#000000', '#555555', '#aaaaaa', '#ffffff', '#550000', '#aa0000',
+      '#aa5555', '#ff0000', '#ff5555', '#ffaaaa', '#aa5500', '#ff5500', '#ffaa00',
+      '#ffaa55', '#555500', '#aaaa00', '#aaaa55', '#ffff00', '#ffff55', '#ffffaa',
+      '#55aa00', '#55ff00', '#aaff00', '#aaff55', '#005500', '#00aa00', '#00ff00',
+      '#55aa55', '#55ff55', '#aaffaa', '#00aa55', '#00ff55', '#00ffaa', '#55ffaa',
+      '#005555', '#00aaaa', '#00ffff', '#55aaaa', '#55ffff', '#aaffff', '#0055aa',
+      '#0055ff', '#00aaff', '#55aaff', '#000055', '#0000aa', '#0000ff', '#5555aa',
+      '#5555ff', '#aaaaff', '#5500aa', '#5500ff', '#aa00ff', '#aa55ff', '#550055',
+      '#aa00aa', '#aa55aa', '#ff00ff', '#ff55ff', '#ffaaff', '#aa0055', '#ff0055',
+      '#ff00aa', '#ff55aa'];
+    var pop = $('palpop'), palgrid = $('palgrid'), onPickCb = null;
+    PAL.forEach(function (hex) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.style.background = hex; b.dataset.hex = hex; b.title = hex;
+      b.addEventListener('click', function () {
+        if (onPickCb) { onPickCb(hex); }
+        pop.classList.remove('show');
+      });
+      palgrid.appendChild(b);
+    });
+    function openPalette(title, current, onPick) {
+      $('paltitle').textContent = title;
+      Array.prototype.forEach.call(palgrid.children, function (c) {
+        c.classList.toggle('on', c.dataset.hex === current);
+      });
+      onPickCb = onPick;
+      pop.classList.add('show');
+    }
+    $('palcancel').addEventListener('click', function () { pop.classList.remove('show'); });
+    pop.addEventListener('click', function (e) { if (e.target === pop) { pop.classList.remove('show'); } });
+
+    // --- Ink: one well, tap opens the palette. White/black ride the legacy
+    // 0/1 wire; anything else is stored as cfg.inkHex (S_INK_COLOR).
+    function lum(hex) {
+      return (parseInt(hex.slice(1, 3), 16) * 3 + parseInt(hex.slice(3, 5), 16) * 6 + parseInt(hex.slice(5, 7), 16)) / 2550;
+    }
+    var colorSel = $('color');
+    function inkHex() { return cfg.inkHex || (colorSel.value === '1' ? '#000000' : '#ffffff'); }
+    var inkWell = document.createElement('button');
+    inkWell.type = 'button'; inkWell.className = 'well'; inkWell.title = 'Ink color';
+    var inkHint = document.createElement('span');
+    inkHint.className = 'wellhint'; inkHint.textContent = 'tap to choose · 64 colors';
+    $('inkwells').appendChild(inkWell); $('inkwells').appendChild(inkHint);
+    function paintInk() { inkWell.style.background = inkHex(); }
+    inkWell.addEventListener('click', function () {
+      openPalette('Ink · 64 Pebble colors', inkHex(), function (hex) {
+        if (hex === '#ffffff' || hex === '#000000') { delete cfg.inkHex; }
+        else { cfg.inkHex = hex; }
+        colorSel.value = lum(hex) >= 0.5 ? '0' : '1';
+        colorSel.dispatchEvent(new Event('change'));
+      });
+    });
+    colorSel.addEventListener('change', paintInk);
+    paintInk();
+
+    // --- Bar color: AUTO keeps the inverse-of-ink; a well overrides. ---------
+    var barrow = $('barrow'), bgSel = $('bg');
+    var autoBtn = document.createElement('button');
+    autoBtn.type = 'button'; autoBtn.className = 'autochip'; autoBtn.textContent = 'AUTO';
+    autoBtn.title = 'Inverse of the ink color';
+    var barWell = document.createElement('button');
+    barWell.type = 'button'; barWell.className = 'well'; barWell.title = 'Bar color';
+    $('barwells').appendChild(autoBtn); $('barwells').appendChild(barWell);
+    $('barwells').style.display = 'inline-flex';
+    $('barwells').style.gap = '10px';
+    $('barwells').style.alignItems = 'center';
+    function paintBar() {
+      autoBtn.classList.toggle('on', !cfg.barHex);
+      barWell.style.background = cfg.barHex || (lum(inkHex()) >= 0.5 ? '#000000' : '#ffffff');
+    }
+    autoBtn.addEventListener('click', function () { delete cfg.barHex; refreshLook(); });
+    barWell.addEventListener('click', function () {
+      openPalette('Bar · 64 Pebble colors', cfg.barHex || '', function (hex) {
+        cfg.barHex = hex; refreshLook();
+      });
+    });
+    function syncBarVis() { barrow.classList.toggle('show', bgSel.value === '1'); }
+    bgSel.addEventListener('change', syncBarVis);
+    syncBarVis();
+
+    // --- Preview tint: re-apply hex colors after the shared preview runs. ----
+    var ovl = $('ovl');
+    function applyHex() {
+      var ink = inkHex();
+      if (cfg.inkHex) {
+        ovl.style.color = ink;
+        document.querySelectorAll('#watch .stack').forEach(function (s) { s.style.color = ink; });
+      }
+      if (bgSel.value === '1' && cfg.barHex) {
+        document.querySelectorAll('#watch .bars div').forEach(function (d) {
+          d.style.background = cfg.barHex;
+        });
+      }
+      paintInk(); paintBar();
+    }
+    function refreshLook() {
+      ui.updatePreview();
+      applyHex();
+    }
+    // Shared code repaints on every change/click; ride the same events.
+    document.addEventListener('change', function () { setTimeout(applyHex, 0); }, true);
+    document.addEventListener('click', function () { setTimeout(applyHex, 0); }, true);
+    applyHex();
+
+    // --- Per-image overrides: clock row / ink / backdrop / bar per image. ----
+    function ovOf(ref) { return cfg.overrides[ref] || null; }
+    function setOv(ref, patch) {
+      var o = cfg.overrides[ref] || {};
+      Object.keys(patch).forEach(function (k) {
+        if (patch[k] === null) { delete o[k]; } else { o[k] = patch[k]; }
+      });
+      if (Object.keys(o).length) { cfg.overrides[ref] = o; } else { delete cfg.overrides[ref]; }
+    }
+    function ovSheet(c) {
+      var ref = c.key;
+      var sh = document.createElement('div'); sh.className = 'ovsheet';
+      var o = ovOf(ref) || {};
+      var head = document.createElement('div'); head.className = 'ovhead';
+      head.innerHTML = '<b>This image</b>';
+      var close = document.createElement('button');
+      close.type = 'button'; close.className = 'close secondary'; close.textContent = 'Done';
+      close.addEventListener('click', function () { openSheetFor = null; renderGroups(); });
+      head.appendChild(close); sh.appendChild(head);
+
+      var rowP = document.createElement('div'); rowP.className = 'ovrow';
+      rowP.innerHTML = '<span class="rowcap">Clock</span>';
+      ['Default', 'Top', 'Middle', 'Bottom'].forEach(function (name, i) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'chip'; b.textContent = name;
+        var val = i === 0 ? null : i - 1;
+        b.classList.toggle('on', val === null ? o.pos === undefined : o.pos === val);
+        b.addEventListener('click', function () {
+          setOv(ref, { pos: val }); renderGroups();
+        });
+        rowP.appendChild(b);
+      });
+      sh.appendChild(rowP);
+
+      var rowI = document.createElement('div'); rowI.className = 'ovrow';
+      rowI.innerHTML = '<span class="rowcap">Ink</span>';
+      var dflt = document.createElement('button');
+      dflt.type = 'button'; dflt.className = 'autochip';
+      dflt.textContent = 'DEFAULT'; dflt.classList.toggle('on', !o.ink);
+      dflt.addEventListener('click', function () { setOv(ref, { ink: null }); renderGroups(); });
+      var well = document.createElement('button');
+      well.type = 'button'; well.className = 'well';
+      well.style.background = o.ink || inkHex();
+      well.addEventListener('click', function () {
+        openPalette('This image · ink', o.ink || inkHex(), function (hex) {
+          setOv(ref, { ink: hex }); renderGroups();
+        });
+      });
+      rowI.appendChild(dflt); rowI.appendChild(well);
+      sh.appendChild(rowI);
+
+      var rowT = document.createElement('div'); rowT.className = 'ovrow';
+      rowT.innerHTML = '<span class="rowcap">Backdrop</span>';
+      [['Default', null], ['Drop shadow', 0], ['Solid bar', 1], ['None', 2]].forEach(function (opt) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'chip'; b.textContent = opt[0];
+        var val = opt[1];
+        b.classList.toggle('on', val === null ? o.bg === undefined : o.bg === val);
+        b.addEventListener('click', function () {
+          setOv(ref, { bg: val }); renderGroups();
+        });
+        rowT.appendChild(b);
+      });
+      sh.appendChild(rowT);
+
+      var rowB = document.createElement('div'); rowB.className = 'ovrow';
+      rowB.innerHTML = '<span class="rowcap">Bar</span>';
+      var bDflt = document.createElement('button');
+      bDflt.type = 'button'; bDflt.className = 'autochip';
+      bDflt.textContent = 'DEFAULT'; bDflt.classList.toggle('on', !o.bar);
+      bDflt.addEventListener('click', function () { setOv(ref, { bar: null }); renderGroups(); });
+      var bWell = document.createElement('button');
+      bWell.type = 'button'; bWell.className = 'well';
+      bWell.style.background = o.bar || (cfg.barHex || (lum(inkHex()) >= 0.5 ? '#000000' : '#ffffff'));
+      bWell.addEventListener('click', function () {
+        openPalette('This image · bar color', o.bar || cfg.barHex || '', function (hex) {
+          setOv(ref, { bar: hex }); renderGroups();
+        });
+      });
+      rowB.appendChild(bDflt); rowB.appendChild(bWell);
+      sh.appendChild(rowB);
+      return sh;
+    }
+
+    $('save').addEventListener('click', function () {
+      delete cfg.bag;
+      PebbleImage.closeConfig(cfg);
+    });
+
+    renderGroups();
+    updateStatus();
+    refreshLook();
+    setPreviewImage(byKey[cfg.sel[0]] || CATALOG[0]);
+  </script>
+</body>
+</html>

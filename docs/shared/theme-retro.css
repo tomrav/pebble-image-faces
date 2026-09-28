@@ -1,0 +1,172 @@
+/*
+ * "Retro" color theme for Pebble settings pages — 70s Kodak film box /
+ * compact-cassette: warm cream paper, chocolate ink, Kodak red + amber, and
+ * the signature multi-stripe band across the top of the page. Flat print
+ * colors on purpose (film boxes were offset print, not glass). Works in light
+ * and dark (follows the phone via prefers-color-scheme, honors an explicit
+ * [data-theme]). Load AFTER Pico and theme.css, INSTEAD of theme-glass.css;
+ * it only sets colors + surfaces via Pico's --pico-* variables.
+ */
+
+/* ---- Light: the film box ---- */
+/* :root:not([data-theme=dark]) rather than plain :root: Pico v2 sets its own
+ * light palette at that specificity, so a bare :root would lose and leave the
+ * default azure buttons (the glass theme has this bug in light mode). */
+:root {
+  color-scheme: light dark;
+}
+:root:not([data-theme="dark"]) {
+  --retro-bg: #f4ecdb;
+  --retro-surface: #fbf6ea;
+  --retro-border: #d9c9a8;
+  --retro-shadow: 0 10px 24px -14px rgba(74, 52, 24, 0.45);
+  /* The stripe band: Kodak red, orange, amber, avocado. */
+  --retro-stripes: linear-gradient(180deg,
+    #c8102e 0 25%, #e87722 25% 50%, #f2a900 50% 75%, #6a7029 75% 100%);
+
+  /* Burnt Kodak orange, not the stripe red: the chip UI paints primary on
+   * every control, and a page full of red read as alarm, not film. The red
+   * stays in the stripe band only. */
+  --pico-primary: #c05a12;
+  --pico-primary-background: #c05a12;
+  --pico-primary-border: #c05a12;
+  --pico-primary-hover: #9e4a0e;
+  --pico-primary-hover-background: #9e4a0e;
+  --pico-primary-hover-border: #9e4a0e;
+  --pico-primary-focus: rgba(192, 90, 18, 0.28);
+  --pico-primary-inverse: #fff8ec;
+  --pico-primary-underline: rgba(192, 90, 18, 0.5);
+
+  --pico-color: #38291a;
+  --pico-h1-color: #2c2013;
+  --pico-h2-color: #2c2013;
+  --pico-h3-color: #2c2013;
+  --pico-background-color: var(--retro-bg);
+  --pico-card-background-color: var(--retro-surface);
+  --pico-card-border-color: var(--retro-border);
+  --pico-card-box-shadow: var(--retro-shadow);
+  --pico-muted-color: #83715a;
+  --pico-muted-border-color: var(--retro-border);
+  --pico-form-element-background-color: #fffdf5;
+  --pico-form-element-border-color: var(--retro-border);
+  --pico-form-element-active-background-color: #ffffff;
+  --pico-switch-background-color: rgba(139, 108, 66, 0.35);
+  --pico-switch-color: #fff8ec;
+}
+
+/* ---- Dark: the cassette shell ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --retro-bg: #211a12;
+    --retro-surface: #2c2318;
+    --retro-border: #4b3c28;
+    --retro-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.7);
+
+    --pico-primary: #e8862d;
+    --pico-primary-background: #e8862d;
+    --pico-primary-border: #e8862d;
+    --pico-primary-hover: #f29b47;
+    --pico-primary-hover-background: #f29b47;
+    --pico-primary-hover-border: #f29b47;
+    --pico-primary-focus: rgba(232, 134, 45, 0.35);
+    --pico-primary-inverse: #241a0e;
+    --pico-primary-underline: rgba(232, 134, 45, 0.5);
+
+    --pico-color: #eee1c8;
+    --pico-h1-color: #f7ecd6;
+    --pico-h2-color: #f7ecd6;
+    --pico-h3-color: #f7ecd6;
+    --pico-muted-color: #a8916f;
+    --pico-form-element-background-color: #1a140d;
+    --pico-form-element-active-background-color: #140f09;
+    --pico-switch-background-color: rgba(232, 178, 96, 0.25);
+  }
+}
+
+[data-theme="dark"] {
+  --retro-bg: #211a12;
+  --retro-surface: #2c2318;
+  --retro-border: #4b3c28;
+  --retro-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.7);
+
+  --pico-primary: #e8862d;
+  --pico-primary-background: #e8862d;
+  --pico-primary-border: #e8862d;
+  --pico-primary-hover: #f29b47;
+  --pico-primary-hover-background: #f29b47;
+  --pico-primary-hover-border: #f29b47;
+  --pico-primary-focus: rgba(232, 134, 45, 0.35);
+  --pico-primary-inverse: #241a0e;
+  --pico-primary-underline: rgba(232, 134, 45, 0.5);
+
+  --pico-color: #eee1c8;
+  --pico-h1-color: #f7ecd6;
+  --pico-h2-color: #f7ecd6;
+  --pico-h3-color: #f7ecd6;
+  --pico-muted-color: #a8916f;
+  --pico-form-element-background-color: #1a140d;
+  --pico-form-element-active-background-color: #140f09;
+  --pico-switch-background-color: rgba(232, 178, 96, 0.25);
+}
+
+[data-theme="light"] {
+  --retro-bg: #f4ecdb;
+  --retro-surface: #fbf6ea;
+  --retro-border: #d9c9a8;
+  --retro-shadow: 0 10px 24px -14px rgba(74, 52, 24, 0.45);
+
+  --pico-primary: #c8102e;
+  --pico-primary-background: #c8102e;
+  --pico-primary-border: #c8102e;
+  --pico-primary-hover: #a30d25;
+  --pico-primary-hover-background: #a30d25;
+  --pico-primary-hover-border: #a30d25;
+  --pico-primary-focus: rgba(200, 16, 46, 0.28);
+  --pico-primary-inverse: #fff8ec;
+  --pico-primary-underline: rgba(200, 16, 46, 0.5);
+
+  --pico-color: #38291a;
+  --pico-h1-color: #2c2013;
+  --pico-h2-color: #2c2013;
+  --pico-h3-color: #2c2013;
+  --pico-muted-color: #83715a;
+  --pico-form-element-background-color: #fffdf5;
+  --pico-form-element-active-background-color: #ffffff;
+  --pico-switch-background-color: rgba(139, 108, 66, 0.35);
+}
+
+/* ---- Surfaces ---- */
+body {
+  background-color: var(--retro-bg);
+  min-height: 100vh;
+}
+
+/* The signature stripe band across the very top of the page. */
+body::before {
+  content: "";
+  position: fixed; top: 0; left: 0; right: 0; height: 8px; z-index: 10;
+  background: var(--retro-stripes);
+}
+
+/* Matte print cards — flat fill, warm rule, gentle drop. */
+article {
+  background: var(--retro-surface);
+  border: 1px solid var(--retro-border);
+  box-shadow: var(--retro-shadow);
+}
+
+/* Section headings read like film-box type: tracked caps with a short stripe
+   underline (pages without sections simply never match). */
+section h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.95rem !important;
+}
+section h2::after {
+  content: "";
+  display: block;
+  width: 72px; height: 5px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--retro-stripes);
+}

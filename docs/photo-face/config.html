@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<!--
+  Photo Face settings page — hosted on Cloudflare Pages (https), opened by the
+  watchFACE via Pebble.openURL with the current config in the URL hash. It's a
+  gallery MANAGER: create/rename/enable galleries, add/remove built-in or
+  uploaded photos, set each gallery's end behavior (loop / advance), and toggle
+  global shuffle. The shipped Cities/Animals/Art galleries are only starting
+  points — the point of this face is that people build their own groupings.
+  It also carries the face's overlay settings (shake, rotation interval, clock
+  position, and the date/battery/steps/heart-rate data points).
+  On Save it returns the whole config; PKJS persists it and drives playback.
+  Uploads go through a crop/zoom step (../shared/face-crop.js), are converted
+  to watch-ready Emery PNGs with the shared pipeline (../shared/pebble-image.js)
+  and stored (base64) in the config; a ✂ badge on an upload re-picks it.
+  Local testing: serve docs/ and open /photo-face/config.html (optionally with
+  a #<encoded-config> hash), or pebble emu-app-config --file …/config.html
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <!-- Don't let the phone webview serve a stale page; assets are versioned below. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Photo Face</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Permanent+Marker&family=Special+Elite&family=Monoton&family=Abril+Fatface&family=Black+Ops+One&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css">
+  <link rel="stylesheet" href="../shared/theme.css?v=20260607b">
+  <link rel="stylesheet" href="../shared/theme-retro.css?v=20260808a">
+  <link rel="stylesheet" href="../shared/face-ui.css?v=20260901a">
+  <style>
+    article.disabled { opacity: .55; }
+    /* Gallery header: name + end/enabled toggles + delete, all on one line. */
+    .ghead { display: flex; align-items: center; gap: var(--pico-spacing); flex-wrap: wrap; }
+    .ghead input[type=text] { margin: 0; flex: 1 1 8rem; min-width: 5rem; }
+    .ghead label { margin: 0; white-space: nowrap; }
+    /* Controls (Loop / On / Delete) grouped and pinned to the right. */
+    .gctrls { display: flex; align-items: center; gap: var(--pico-spacing); margin-left: auto; }
+    /* The photos currently in a gallery, as a grid. */
+    .strip { display: grid; grid-template-columns: repeat(var(--gallery-cols), 1fr); gap: var(--grid-gap); margin: 0 0 var(--space-3); }
+    .strip:empty::after { content: "No photos yet — Add photos below."; color: var(--pico-muted-color); font-size: .85rem; }
+    .thumb { position: relative; width: 100%; }
+    .thumb img { width: 100%; aspect-ratio: var(--thumb-ratio); object-fit: cover; border-radius: var(--thumb-radius); display: block; }
+    .thumb .x {
+      position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; padding: 0;
+      border-radius: 50%; line-height: 1; font-size: 13px; --pico-form-element-spacing-vertical: 0;
+      --pico-form-element-spacing-horizontal: 0;
+    }
+    /* Re-crop badge on uploads (bottom right; the ✎ override badge has the
+       bottom left). Picks the photo again from the phone: the page only ever
+       keeps the watch-size crop, so there is nothing else to re-crop from. */
+    .thumb .recrop {
+      position: absolute; right: 4px; bottom: 4px; width: 24px; height: 24px; padding: 0; margin: 0;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.6); color: #fff; border: 1px solid rgba(255,255,255,.5);
+      --pico-form-element-spacing-vertical: 0; --pico-form-element-spacing-horizontal: 0;
+    }
+    .thumb .recrop svg { width: 14px; height: 14px; display: block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+    /* Built-in picker grid (shown when adding photos to a gallery). */
+    .pickcat { font-size: .8rem; margin: var(--space-4) 0 var(--space-2); color: var(--pico-muted-color);
+      text-transform: uppercase; letter-spacing: .06em; }
+    .libcell { position: relative; display: block; }
+    .libcell .ondevice { position: absolute; top: 3px; left: 5px; font-size: 10px;
+      color: #f2a900; text-shadow: 0 0 3px rgba(0,0,0,.8); pointer-events: none; }
+    .picker { border-top: var(--pico-border-width) solid var(--pico-muted-border-color); margin-top: var(--space-4); padding-top: var(--space-4); }
+    .gallery { display: grid; grid-template-columns: repeat(var(--gallery-cols), 1fr); gap: var(--grid-gap); margin: var(--space-3) 0 var(--space-4); }
+    .gallery img {
+      width: 100%; aspect-ratio: var(--thumb-ratio); object-fit: cover; border-radius: var(--thumb-radius);
+      cursor: pointer; border: var(--thumb-border) solid transparent; transition: border-color .15s ease;
+    }
+    .gallery img.added { border-color: var(--pico-primary); opacity: .5; }
+    /* Upload: the native file input renders as a washed-out grey button that
+       reads as disabled, so present the wrapping label as an outline button and
+       clip the input instead. Clipped rather than display:none — Android's
+       webview only just started honouring these at all, so leave it in the
+       layout tree. */
+    .upload {
+      position: relative; display: block; width: 100%;
+      margin: var(--space-3) 0 var(--space-2); padding: .6rem 1rem;
+      font-size: .95rem; font-weight: 600; text-align: center; cursor: pointer;
+      color: var(--pico-primary-inverse); background: var(--pico-primary);
+      border: var(--pico-border-width) solid var(--pico-primary);
+      border-radius: var(--pico-border-radius);
+      transition: filter .15s ease;
+    }
+    .upload:hover { filter: brightness(1.1); }
+    .upload:focus-within { box-shadow: 0 0 0 var(--pico-outline-width) var(--pico-primary-focus); }
+    .upload input[type=file] {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); border: 0;
+    }
+    /* Remove gallery: deliberately quiet — a muted text link at the card's
+       bottom, not a red button at eye level beside switches used constantly.
+       (Red stays reserved for the moment of actual destruction: the confirm.) */
+    .delgal {
+      background: none; border: 0; width: auto; margin: 0; padding: 0;
+      font-size: .8rem; color: var(--pico-muted-color);
+      text-decoration: underline; cursor: pointer;
+    }
+    .delgal:hover { color: #c8102e; }
+    /* Watch frame + overlay come from ../shared/face-ui.css (#watch / #ovl). */
+
+    /* --- Film-strip frame around the preview --- */
+    .film {
+      position: relative; width: fit-content; margin: 0 auto;
+      padding: 12px 26px 24px; border-radius: 6px;
+      background: #17130f;
+      box-shadow: var(--retro-shadow, 0 10px 24px -14px rgba(0,0,0,.5));
+    }
+    /* Sprocket rails: a column of rounded holes down each side. */
+    .film::before, .film::after {
+      content: ""; position: absolute; top: 10px; bottom: 22px; width: 10px;
+      background-image: radial-gradient(4px 5px at 50% 50%, var(--retro-bg, #f4ecdb) 92%, transparent 100%);
+      background-size: 10px 18px; background-repeat: repeat-y;
+    }
+    .film::before { left: 8px; }
+    .film::after { right: 8px; }
+    .film #watch { border: 0; border-radius: 2px; }
+    /* Film-edge marking, like the frame numbers on a negative. */
+    .film .edge {
+      position: absolute; left: 0; right: 0; bottom: 5px; text-align: center;
+      font-size: 9px; letter-spacing: .18em; font-weight: 700;
+      color: #e8862d; text-transform: uppercase; pointer-events: none;
+    }
+
+    /* --- Sticky save bar (hidden until something changed) --- */
+    #savebar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: center; gap: var(--space-4);
+      padding: var(--space-3) var(--space-5);
+      background: var(--retro-surface, #fbf6ea);
+      border-top: 4px solid transparent;
+      border-image: var(--retro-stripes) 1;
+      box-shadow: 0 -8px 24px -12px rgba(0, 0, 0, .4);
+      transform: translateY(110%); transition: transform .25s ease;
+    }
+    #savebar.dirty { transform: translateY(0); }
+    #savebar #status { margin: 0; }
+    #savebar #save { margin: 0; width: auto; min-width: 0; padding: .45rem 1.4rem; font-size: .85rem; white-space: nowrap; }
+    #savebar #discard {
+      margin: 0; width: auto; padding: .45rem .9rem; font-size: .85rem;
+      background: transparent; color: var(--pico-muted-color);
+      border: 1.5px solid var(--pico-muted-border-color); white-space: nowrap;
+    }
+
+    .secnote { margin: calc(-1 * var(--space-2)) 0 var(--space-3); color: var(--pico-muted-color); }
+
+    /* --- Sections + vertical rhythm --- */
+    hgroup h1 { margin-bottom: var(--space-3); }                     /* title away from description */
+    .ghead { margin-bottom: var(--space-5); }
+    /* Each section starts with a rule + heading, so settings never blend into
+       the gallery cards below them. */
+    section { margin: 0 0 var(--space-5); }
+    section + section { border-top: var(--pico-border-width) solid var(--pico-muted-border-color);
+      padding-top: var(--space-5); }
+    section h2 { font-size: 1.05rem; margin: 0 0 var(--space-4); }
+    /* Compact 2x2 grid for the four clock selects: label above its control. */
+    .selpair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-4);
+      margin: 0 0 var(--space-3); }
+    .selpair label { margin: 0; font-size: .85rem; color: var(--pico-muted-color); }
+    .selpair select { width: 100%; margin: 4px 0 0; }
+    /* Shake + shuffle: side by side when they fit, stacked on narrow phones
+       (13rem columns need ~430px -- clipped switch labels are worse than a
+       second row). */
+    .switchpair { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+      gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-3); }
+    .switchpair label { margin: 0; white-space: nowrap; }
+    .autorow { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: 0 0 var(--space-4); }
+    .autorow label { margin: 0; white-space: nowrap; }
+    .autorow select { width: auto; margin: 0; }
+    #galleries { margin-bottom: var(--space-4); }
+    #gridhint { margin: var(--space-2) 0 0; text-align: center; color: var(--pico-muted-color); }
+    figure { margin: var(--space-4) 0 0; text-align: center; }
+    figcaption { margin-bottom: var(--space-3); color: var(--pico-muted-color); font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+    #status { display: block; text-align: center; margin: var(--space-2) 0 var(--space-3); color: var(--pico-muted-color); }
+    /* Add gallery + Save are centered; Add photos (per card) stays bottom-right. */
+    #addgal { display: block; width: fit-content; margin: 0 auto; }
+    #save { display: block; width: fit-content; min-width: 9rem; margin: var(--space-3) auto 0; }
+    /* Card footer: quiet remove link left, Add photos right. */
+    .gfoot { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-4); }
+    .addphotos {
+      width: auto; margin: 0; font-size: .8rem;
+      --pico-form-element-spacing-vertical: .4rem; --pico-form-element-spacing-horizontal: 1rem;
+    }
+
+    /* ==== v2 prototype: one-tap chips (no native selects visible) ========= */
+    .hiddensels { display: none; }
+    #chippanel { margin-bottom: 6px; --sample-ink: var(--pico-color); }
+    .chiprow { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
+    .chiprow + .chiprow { border-top: 1px dashed color-mix(in srgb, var(--pico-muted-border-color) 55%, transparent); }
+    .rowcap {
+      flex: 0 0 96px; font-size: .68rem; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase; color: var(--pico-muted-color);
+    }
+    .chips, .swatches { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; min-width: 0; }
+    .swatches { gap: 10px; }
+    .chip, .fontchip {
+      margin: 0; width: auto; padding: .42rem .85rem; font-size: .82rem; font-weight: 600;
+      color: var(--pico-primary); background: transparent;
+      border: 1.5px solid color-mix(in srgb, var(--pico-primary) 45%, transparent);
+      border-radius: 9px; cursor: pointer;
+      transition: transform .08s ease, background-color .15s ease, color .15s ease;
+    }
+    .chip:active, .fontchip:active { transform: translateY(1px); }
+    .chip.on {
+      color: var(--pico-primary-inverse); background: var(--pico-primary);
+      border-color: var(--pico-primary);
+    }
+    .sstab {
+      margin: 0; width: auto; padding: .42rem .85rem; font-size: .82rem;
+      font-weight: 700; letter-spacing: .06em;
+      color: var(--pico-muted-color); background: transparent;
+      border: 1.5px dashed color-mix(in srgb, var(--pico-muted-border-color) 90%, transparent);
+      border-radius: 9px; cursor: pointer;
+    }
+    .sstab.on {
+      color: var(--pico-primary-inverse); background: var(--pico-primary);
+      border: 1.5px solid var(--pico-primary);
+    }
+    .featsw {
+      margin: 0 0 0 auto; display: flex; align-items: center; gap: 7px;
+      font-size: .78rem; font-weight: 600; color: var(--pico-muted-color);
+      white-space: nowrap; cursor: pointer;
+    }
+    .featsw input { margin: 0; width: 2.1em; height: 1.05em; }
+    /* Style chips preview their own font. */
+    .fontchip { display: flex; flex-direction: column; align-items: center; gap: 0; padding: .34rem .8rem .3rem; }
+    .fontchip .t { font-size: 17px; line-height: 1.15; color: var(--sample-ink, #eee1c8); }
+    .fontchip small { font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; }
+    .fontchip.on { background: color-mix(in srgb, var(--pico-primary) 16%, transparent); border-color: var(--pico-primary); }
+    .fontchip.on small { color: var(--pico-primary); }
+    .fontchip.fs0 .t { font-weight: 800; font-family: "Helvetica Neue", Arial, sans-serif; letter-spacing: .5px; }
+    .fontchip.fs1 .t { font-weight: 300; font-family: "Helvetica Neue", Arial, sans-serif; letter-spacing: .5px; }
+    .fontchip.fs2 .t { font-weight: 700; font-family: "Courier New", monospace; }
+    .fontchip.fs3 .t { font-family: "VT323", monospace; font-size: 20px; }
+    .fontchip.fs4 .t { font-family: "Permanent Marker", cursive; font-size: 15px; padding-top: 2px; }
+    .fontchip.fs5 .t { font-family: "Special Elite", serif; font-size: 16px; padding-top: 1px; }
+    .fontchip.fs6 .t { font-family: "Monoton", cursive; font-size: 15px; padding-top: 2px; }
+    .fontchip.fs7 .t { font-family: "Abril Fatface", serif; font-size: 16px; padding-top: 1px; }
+    .fontchip.fs8 .t { font-family: "Black Ops One", cursive; font-size: 14px; padding-top: 2px; }
+    .fontchip.fs9 .t { font-family: "DSEG7-Classic", monospace; font-size: 13px; padding-top: 3px; }
+    /* Candidate styles 5-9 preview on the page only for now; the watch shows
+       Bold for them until their fonts ship in a later release. */
+    #ovl.f5 .clk { font-family: "Special Elite", serif; font-weight: 400; font-size: 34px; }
+    #ovl.f6 .clk { font-family: "Monoton", cursive; font-weight: 400; font-size: 32px; }
+    #ovl.f7 .clk { font-family: "Abril Fatface", serif; font-weight: 400; font-size: 36px; }
+    #ovl.f8 .clk { font-family: "Black Ops One", cursive; font-weight: 400; font-size: 31px; }
+    #ovl.f9 .clk { font-family: "DSEG7-Classic", monospace; font-weight: 400; font-size: 27px; }
+    #watch .cells.if5 .stack { font-family: "Special Elite", serif; font-size: 15px; }
+    #watch .cells.if7 .stack { font-family: "Abril Fatface", serif; font-size: 15px; }
+    #watch .cells.if8 .stack { font-family: "Black Ops One", cursive; font-size: 13px; }
+    /* Color wells: tap to open the 64-color Pebble palette. */
+    .well {
+      margin: 0; padding: 0; width: 30px; height: 30px; border-radius: 50%; flex: none;
+      border: 2px solid color-mix(in srgb, var(--pico-primary) 55%, transparent);
+      cursor: pointer;
+    }
+    .well:focus-visible { box-shadow: 0 0 0 3px var(--pico-primary-focus); }
+    .wellhint { font-size: .72rem; color: var(--pico-muted-color); }
+    .autochip {
+      margin: 0; width: auto; padding: .3rem .6rem; font-size: .7rem; font-weight: 700;
+      letter-spacing: .1em; color: var(--pico-muted-color); background: transparent;
+      border: 1.5px solid color-mix(in srgb, var(--pico-muted-border-color) 90%, transparent);
+      border-radius: 9px; cursor: pointer;
+    }
+    .autochip.on { color: var(--pico-primary); border-color: var(--pico-primary); }
+    #barsw { display: none; gap: 14px; }
+    #barsw.show { display: flex; }
+    /* 64-color palette picker (all colors Emery can actually show). */
+    #palpop {
+      position: fixed; inset: 0; z-index: 60; display: none;
+      background: rgba(12, 9, 6, .62); align-items: center; justify-content: center;
+    }
+    #palpop.show { display: flex; }
+    #palpop .card {
+      background: var(--pico-card-background-color, #241d15);
+      border: 1px solid var(--pico-muted-border-color); border-radius: 14px;
+      padding: 16px 16px 12px; max-width: 330px;
+    }
+    #palpop h3 { margin: 0 0 10px; font-size: .8rem; letter-spacing: .16em; text-transform: uppercase; }
+    #palpop .grid { display: grid; grid-template-columns: repeat(8, 30px); gap: 6px; }
+    #palpop .grid button {
+      margin: 0; padding: 0; width: 30px; height: 30px; border-radius: 7px;
+      border: 1.5px solid rgba(255,255,255,.14); cursor: pointer;
+    }
+    #palpop .grid button.on { outline: 3px solid var(--pico-primary); outline-offset: 1px; }
+    #palpop .foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+    #palpop .foot button { margin: 0; width: auto; padding: .35rem .9rem; font-size: .8rem; }
+    /* Data points: a compact chip tray (id-scoped to beat face-ui.css). */
+    #dplist { display: flex; flex-wrap: wrap; gap: 7px; margin: var(--space-3) 0 var(--space-5); }
+    #dplist .dprow {
+      display: inline-flex; align-items: center; gap: 6px; width: auto; max-width: 100%;
+      padding: .28rem .3rem .28rem .65rem; border-radius: 9px; border-top: 0;
+      border: 1.5px solid color-mix(in srgb, var(--pico-muted-border-color) 90%, transparent);
+    }
+    #dplist .dprow.on { border-color: var(--pico-primary); background: color-mix(in srgb, var(--pico-primary) 12%, transparent); }
+    #dplist .dprow .lbl { flex: none; font-size: .78rem; font-weight: 700; }
+    #dplist .dprow .pos {
+      margin: 0; width: auto; padding: .16rem .45rem; font-size: .64rem; letter-spacing: .04em;
+      text-transform: uppercase; background: transparent; color: var(--pico-muted-color);
+      border: 1px dashed color-mix(in srgb, var(--pico-muted-border-color) 90%, transparent);
+      border-radius: 7px; cursor: pointer; white-space: nowrap;
+    }
+    #dplist .dprow.on .pos { color: var(--pico-primary); border-style: solid; border-color: var(--pico-primary); }
+    #dplist .dprow.arming .pos { color: var(--pico-primary-inverse); background: var(--pico-primary); border-color: var(--pico-primary); }
+    #dplist .dprow .off {
+      margin: 0; width: 20px; height: 20px; padding: 0; line-height: 1; font-size: .8rem;
+      background: transparent; color: var(--pico-muted-color); border: 0; border-radius: 50%; cursor: pointer;
+    }
+    #dplist .dprow .off:disabled { opacity: .3; }
+    /* Per-image override: pencil badge on thumbs, slide-mount sheet in the card. */
+    .thumb .ovbtn {
+      position: absolute; left: 5px; bottom: 5px; width: 34px; height: 34px; margin: 0; padding: 0;
+      font-size: 17px; line-height: 1; border-radius: 8px; cursor: pointer;
+      background: rgba(20, 15, 10, .72); color: #f4ecdb; border: 1px solid rgba(244, 236, 219, .35);
+    }
+    .thumb .ovbtn.marked { background: var(--pico-primary); color: var(--pico-primary-inverse); border-color: var(--pico-primary); }
+    .strip .ovsheet { grid-column: 1 / -1; }
+    .ovsheet {
+      margin: 10px 0 4px; padding: 10px 12px; border-radius: 10px;
+      border: 1.5px dashed color-mix(in srgb, var(--pico-primary) 55%, transparent);
+    }
+    .ovsheet .ovhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ovsheet .ovhead b { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; }
+    .ovsheet .ovhead small { color: var(--pico-muted-color); font-size: .72rem; }
+    .ovsheet .ovhead .close { margin-left: auto; margin-bottom: 0; width: auto; padding: .2rem .6rem; font-size: .75rem; }
+    .ovsheet .ovrow { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 5px 0; }
+    .ovbody { display: flex; gap: 16px; align-items: flex-start; }
+    .ovbody .ovrows { flex: 1; min-width: 0; }
+    .ovmini {
+      flex: none; position: relative; width: 100px; height: 114px; overflow: hidden;
+      border-radius: 5px; background: #111; box-shadow: 0 0 0 3px #17130f;
+      image-rendering: pixelated;
+    }
+    .ovmini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ovmini .mclk {
+      position: absolute; left: 0; right: 0; text-align: center;
+      font-size: 19px; line-height: 1.05; font-weight: 800;
+      font-family: "Helvetica Neue", Arial, sans-serif; letter-spacing: .5px;
+    }
+    .ovmini .minf {
+      position: absolute; left: 0; right: 0; text-align: center;
+      font-size: 8px; line-height: 1.4; font-weight: 700; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    @media (max-width: 480px) { .ovbody { flex-direction: column; } .ovmini { align-self: center; } }
+    /* Narrow phones: a side caption column starves the chips into ragged
+       wrapping, so the caption moves onto its own line above them. */
+    @media (max-width: 560px) {
+      .chiprow { display: block; position: relative; padding: 10px 0; }
+      .chiprow .rowcap { display: block; margin: 0 0 7px; }
+      .featsw { position: absolute; top: 8px; right: 0; margin: 0; }
+      .ovsheet .ovrow { display: block; padding: 8px 0; }
+      .ovsheet .ovrow .rowcap { display: block; flex: none; margin: 0 0 7px; }
+      .ovsheet .ovrow .chip, .ovsheet .ovrow .autochip, .ovsheet .ovrow .well { vertical-align: middle; }
+      .ovsheet .ovrow .chip, .ovsheet .ovrow .autochip { margin: 0 5px 5px 0; }
+      .ovsheet .ovrow .well { margin-bottom: 5px; }
+      #savebar { gap: var(--space-3); padding-left: var(--space-3); padding-right: var(--space-3); }
+      #barsw.show { margin-top: 7px; }  /* same as the chips' wrap gap */
+      .ovsheet .ovhead b { white-space: nowrap; }
+      .ovsheet .ovhead small { display: none; }
+    }
+    .ovsheet .ovrow .rowcap { padding: 0; flex: 0 0 92px; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <hgroup>
+      <h1>Photo Face</h1>
+      <p>Photos change on a <strong>wrist shake</strong> or a timer — build
+        your own galleries below.</p>
+    </hgroup>
+
+    <!-- Two clearly separated sections. "Clock & overlay" owns everything the
+         preview reflects (typography rows, the preview itself, the data-point
+         list right under it). "Photos" owns playback + the gallery manager. -->
+    <section>
+      <h2>Clock &amp; overlay</h2>
+
+      <div id="chippanel">
+        <div class="chiprow">
+          <span class="rowcap">Position</span>
+          <div class="chips" id="chips-clockpos"></div>
+        </div>
+        <div class="chiprow">
+          <span class="rowcap">Time</span>
+          <div class="chips" id="chips-timefmt"></div>
+          <button type="button" class="sstab" id="sstab" title="Show seconds">:SS</button>
+        </div>
+        <div class="chiprow">
+          <span class="rowcap">Style</span>
+          <div class="chips" id="chips-font"></div>
+          <label class="featsw" title="Apply the style to the data points too">
+            <input type="checkbox" id="fontallsw" role="switch"> Features
+          </label>
+        </div>
+        <div class="chiprow">
+          <span class="rowcap">Size</span>
+          <div class="chips" id="chips-fontsize"></div>
+        </div>
+        <div class="chiprow">
+          <span class="rowcap">Backdrop</span>
+          <div class="chips" id="chips-bg"></div>
+          <div class="swatches" id="barsw" title="Bar color"></div>
+        </div>
+        <div class="chiprow">
+          <span class="rowcap">Ink</span>
+          <div class="swatches" id="chips-color"></div>
+        </div>
+      </div>
+      <div class="hiddensels">
+        <select id="clockpos">
+          <option value="0">Top</option><option value="1">Middle</option><option value="2">Bottom</option>
+        </select>
+        <select id="timefmt">
+          <option value="0">Auto</option><option value="1">12h</option><option value="2">24h</option>
+        </select>
+        <select id="seconds"><option value="0">Off</option><option value="1">On</option></select>
+        <select id="font">
+          <option value="0">Bold</option><option value="1">Light</option><option value="2">Digital</option>
+          <option value="3">Pixel</option><option value="4">Script</option>
+          <option value="5">Typewriter</option><option value="6">Neon</option>
+          <option value="7">Poster</option><option value="8">Stencil</option>
+          <option value="9">LCD</option>
+        </select>
+        <select id="fontall"><option value="0">Clock only</option><option value="1">Clock + features</option></select>
+        <select id="fontsize"><option value="0">Small</option><option value="1">Medium</option><option value="2">Large</option></select>
+        <select id="color"><option value="0">White</option><option value="1">Black</option></select>
+        <select id="bg">
+          <option value="0">Drop shadow</option><option value="1">Solid bar</option><option value="2">None</option>
+        </select>
+      </div>
+
+      <!-- Preview first, the data-point list directly UNDER it: you tap a
+           position button in the list, then a spot on the preview just above,
+           so the two must sit together. (Shared face-config.js / face-ui.css.) -->
+      <figure>
+        <figcaption>Watch preview</figcaption>
+        <!-- Framed like a strip of 35mm: sprocket rails either side, the
+             film-edge marking underneath. Pure CSS (theme payoff). -->
+        <div class="film">
+          <div id="watch">
+            <img id="pimg" alt="">
+            <div id="ovl"><div class="clk">10:08</div><div class="inf"></div></div>
+          </div>
+          <span class="edge">PHOTO FACE&nbsp;&nbsp;·&nbsp;&nbsp;200 ▸ 228&nbsp;&nbsp;·&nbsp;&nbsp;64</span>
+        </div>
+      </figure>
+
+      <!-- Every data point is always listed; its button shows where it lives
+           ("Off" = not shown). Items sharing a spot flow side by side. -->
+      <p id="gridhint"><small>Tap a position button, then tap a spot on the
+        watch. Items on the same spot sit side by side.</small></p>
+      <div class="dplist" id="dplist"></div>
+
+      <div class="autorow" id="unitrow">
+        <label for="tempunit">Temperature unit</label>
+        <select id="tempunit">
+          <option value="c">°C</option>
+          <option value="f">°F</option>
+        </select>
+      </div>
+    </section>
+
+    <section>
+      <h2>Photos</h2>
+      <p class="secnote"><small>A watchface gets no buttons and no touch —
+        shake your wrist or let the timer advance the photo. Each gallery
+        loops, or rolls into the next one when Loop is off.</small></p>
+
+      <div class="switchpair">
+        <label><input type="checkbox" role="switch" id="shake"> Shake to change photo</label>
+        <label><input type="checkbox" role="switch" id="shuffle"> Shuffle across galleries</label>
+      </div>
+
+      <div class="autorow">
+        <label for="rotate">Change photo every</label>
+        <select id="rotate">
+          <option value="0">Never</option>
+          <option value="1">1 minute</option>
+          <option value="5">5 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="240">4 hours</option>
+          <option value="1440">Once a day</option>
+        </select>
+      </div>
+
+      <div id="galleries"></div>
+
+      <button id="addgal" class="outline">＋ Add gallery</button>
+    </section>
+
+    <!-- Sticky save bar: hidden until the config differs from what PKJS sent,
+         so edits can't be lost by closing the webview with Save out of sight
+         at the bottom of a long page. -->
+    <div id="palpop" role="dialog" aria-modal="true">
+      <div class="card">
+        <h3 id="paltitle">Pick a color</h3>
+        <div class="grid" id="palgrid"></div>
+        <div class="foot"><button type="button" class="secondary" id="palcancel">Cancel</button></div>
+      </div>
+    </div>
+
+    <div id="savebar">
+      <small id="status"></small>
+      <button id="discard" class="secondary">Discard</button>
+      <button id="save">Save</button>
+    </div>
+  </main>
+
+  <script src="../shared/pebble-image.js?v=20260917a"></script>
+  <script src="../shared/face-crop.js?v=20260917a"></script>
+  <script src="../shared/face-config.js?v=20260901a"></script>
+  <script>
+    // >>>GEN:GALLERY>>>
+    var GALLERY = [
+      { key: 'animals-1', name: "Lion", cat: "Animals", file: 'img/animals-1.jpg', bundled: true },
+      { key: 'animals-2', name: "Tiger", cat: "Animals", file: 'img/animals-2.jpg', bundled: false },
+      { key: 'animals-3', name: "Elephant", cat: "Animals", file: 'img/animals-3.jpg', bundled: false },
+      { key: 'animals-4', name: "Giraffe", cat: "Animals", file: 'img/animals-4.jpg', bundled: false },
+      { key: 'animals-5', name: "Red fox", cat: "Animals", file: 'img/animals-5.jpg', bundled: false },
+      { key: 'space-1', name: "The Moon", cat: "Space", file: 'img/space-1.jpg', bundled: true },
+      { key: 'space-2', name: "Nebula", cat: "Space", file: 'img/space-2.jpg', bundled: false },
+      { key: 'space-3', name: "Rocket launch", cat: "Space", file: 'img/space-3.jpg', bundled: false },
+      { key: 'architecture-1', name: "Spiral staircase", cat: "Architecture", file: 'img/architecture-1.jpg', bundled: true },
+      { key: 'architecture-2', name: "Cathedral interior", cat: "Architecture", file: 'img/architecture-2.jpg', bundled: false },
+      { key: 'architecture-3', name: "Skyscraper", cat: "Architecture", file: 'img/architecture-3.jpg', bundled: false },
+      { key: 'architecture-4', name: "Pagoda", cat: "Architecture", file: 'img/architecture-4.jpg', bundled: false },
+      { key: 'architecture-5', name: "Suspension bridge", cat: "Architecture", file: 'img/architecture-5.jpg', bundled: false },
+      { key: 'transport-1', name: "Hot air balloon", cat: "Transportation", file: 'img/transport-1.jpg', bundled: true },
+      { key: 'transport-2', name: "Bicycle", cat: "Transportation", file: 'img/transport-2.jpg', bundled: false },
+      { key: 'transport-3', name: "Vintage car", cat: "Transportation", file: 'img/transport-3.jpg', bundled: false },
+      { key: 'transport-4', name: "Steam train", cat: "Transportation", file: 'img/transport-4.jpg', bundled: false },
+      { key: 'transport-5', name: "Airplane", cat: "Transportation", file: 'img/transport-5.jpg', bundled: false },
+      { key: 'flora-1', name: "Cherry blossom", cat: "Flora", file: 'img/flora-1.jpg', bundled: true },
+      { key: 'flora-2', name: "Sunflower", cat: "Flora", file: 'img/flora-2.jpg', bundled: false },
+      { key: 'flora-3', name: "Rose", cat: "Flora", file: 'img/flora-3.jpg', bundled: false },
+      { key: 'flora-4', name: "Bamboo forest", cat: "Flora", file: 'img/flora-4.jpg', bundled: false },
+      { key: 'flora-5', name: "Cactus", cat: "Flora", file: 'img/flora-5.jpg', bundled: false }
+    ];
+    var CATS = [
+      { slug: 'animals', name: "Animals" },
+      { slug: 'space', name: "Space" },
+      { slug: 'architecture', name: "Architecture" },
+      { slug: 'transport', name: "Transportation" },
+      { slug: 'flora', name: "Flora" }
+    ];
+// <<<GEN:GALLERY<<<
+
+    // Built-in lookup keyed by basename ('hiro-1'), matching the PKJS refs 'b:hiro-1'.
+    // Library lookup by key; a library ref is 'b:<key>' when bundled in the
+    // .pbw, 'r:<key>' when streamed from the host — the entry's flag decides.
+    var LIB = {};
+    GALLERY.forEach(function (g) { LIB[g.key] = g; });
+    function libRef(g) { return (g.bundled ? 'b:' : 'r:') + g.key; }
+
+    var galleriesEl = document.getElementById('galleries');
+    var shuffleEl = document.getElementById('shuffle');
+    var previewEl = document.getElementById('pimg');
+    var statusEl = document.getElementById('status');
+
+    function defaultCfg() {
+      // One default gallery per library category (must match the PKJS).
+      var galleries = CATS.map(function (c) {
+        return {
+          id: c.slug, name: c.name, enabled: true, end: 'next',
+          items: GALLERY.filter(function (g) { return g.cat === c.name; }).map(libRef)
+        };
+      });
+      return {
+        // Starting points only — rename, disable or delete them freely.
+        galleries: galleries,
+        uploads: {}, shuffle: false, cursor: { g: 0, i: 0 },
+        // Must match defaultCfg() in the PKJS.
+        rotateMin: 30, shake: true, clockPos: 2, timeFmt: 0, seconds: 0, fontAll: 1,
+        tempUnit: 'c', font: 0, fontSize: 1, color: 0, bg: 0,
+        grid: [{ k: 'date', pos: 8 }]
+      };
+    }
+
+    // Inbound config from PKJS lives in the URL hash.
+    var cfg;
+    try {
+      var raw = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
+      cfg = raw ? JSON.parse(raw) : defaultCfg();
+      if (!cfg.galleries || !cfg.galleries.length) { cfg = defaultCfg(); }
+      if (!cfg.uploads) { cfg.uploads = {}; }
+      if (!cfg.auto) { cfg.auto = { on: false, sec: 300 }; }
+    } catch (e) { cfg = defaultCfg(); }
+
+    // Protocol with the PKJS (the note atop pkjs/index.js has the whole story).
+    // v2 hands us THUMBNAILS in place of upload bytes and takes back only the
+    // photos added on this visit, so a save costs the new photos, not the whole
+    // gallery. An older PKJS sends no v: cfg.uploads then holds every photo and
+    // every photo goes back, as it always did.
+    var INCREMENTAL = cfg.v >= 2;
+    var thumbs = cfg.thumbs || {};   // id -> b64: JPEG thumb, or a legacy upload's full PNG
+    delete cfg.thumbs;
+    var newThumbs = {};              // made on this visit; ride back with the save
+    function dataUrl(b64) {
+      return 'data:image/' + (b64.charAt(0) === '/' ? 'jpeg' : 'png') + ';base64,' + b64;
+    }
+    // What actually travels back to the phone.
+    function outboundCfg() {
+      var out = {};
+      for (var k in cfg) { if (cfg.hasOwnProperty(k)) { out[k] = cfg[k]; } }
+      if (INCREMENTAL) { out.v = 2; out.thumbs = newThumbs; } // out.uploads = this visit's photos only
+      return out;
+    }
+
+    var expanded = null; // gallery index whose "Add photos" picker is open
+    // The settings page only ever runs inside the Pebble phone app (or the SDK's
+    // desktop config server), so the platform token is enough to tell the Android
+    // webview apart; see the picker note in pickerPanel().
+    var ANDROID_APP = /Android/i.test(navigator.userAgent);
+
+    // Resolve an item ref to a thumbnail URL + label.
+    function refThumb(ref) {
+      if (ref.charAt(0) === 'b' || ref.charAt(0) === 'r') { var g = LIB[ref.slice(2)]; return g ? g.file : ''; }
+      if (ref.charAt(0) === 'u') { var id = ref.slice(2); return dataUrl(cfg.uploads[id] || thumbs[id] || ''); }
+      return '';
+    }
+
+    // Gallery-card thumbnail: a small JPEG of the photo as the watch will show
+    // it. Kept on the phone in place of the 30 KB PNG for the page's benefit.
+    var THUMB_W = 96, THUMB_H = 109;
+    function makeThumb(img, crop, rect) {
+      var r = PebbleImage.sourceRect(img, rect);
+      var cv = document.createElement('canvas'), w, h, dw, dh;
+      if (crop) {
+        var s = Math.max(THUMB_W / r.w, THUMB_H / r.h);
+        w = THUMB_W; h = THUMB_H; dw = Math.round(r.w * s); dh = Math.round(r.h * s);
+      } else {
+        var f = Math.min(THUMB_W / r.w, THUMB_H / r.h, 1);
+        w = dw = Math.max(1, Math.round(r.w * f)); h = dh = Math.max(1, Math.round(r.h * f));
+      }
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, r.x, r.y, r.w, r.h, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh);
+      return cv.toDataURL('image/jpeg', 0.7).split(',')[1];
+    }
+    // A phone photo can be 50 megapixels; the cropper pans it and the watch
+    // gets 200x228 of it, so one downscale to ~1200px serves both.
+    var WORK_MAX = 1200;
+    function workingCopy(img) {
+      var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      var f = WORK_MAX / Math.max(w, h);
+      if (f >= 1) { return img; }
+      var cv = document.createElement('canvas');
+      cv.width = Math.round(w * f); cv.height = Math.round(h * f);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      return cv;
+    }
+    // Uploads from before thumbnails existed arrive as their full PNG. Make
+    // each a real thumbnail once, so the next save relieves the phone of
+    // sending 30 KB per photo every time settings open. Display is unaffected
+    // meanwhile (the PNG renders fine), so no re-render is needed.
+    if (INCREMENTAL) {
+      Object.keys(thumbs).forEach(function (id) {
+        if (thumbs[id].charAt(0) === '/') { return; } // already a JPEG
+        var img = new Image();
+        img.onload = function () { newThumbs[id] = thumbs[id] = makeThumb(img, false); };
+        img.src = dataUrl(thumbs[id]);
+      });
+    }
+    function refLabel(ref) {
+      if (ref.charAt(0) === 'b' || ref.charAt(0) === 'r') { var g = LIB[ref.slice(2)]; return g ? g.name : ref; }
+      return 'Upload';
+    }
+
+    function setPreview(src) {
+      previewEl.src = src;
+    }
+
+    // Show a built-in at watch fidelity (cover, like the watch renders it).
+    function previewBuiltin(file, label) {
+      var img = new Image();
+      img.onload = function () {
+        PebbleImage.processImage(img, { crop: true }).then(function (r) {
+          setPreview('data:image/png;base64,' + r.b64, label);
+        });
+      };
+      img.src = file;
+    }
+
+    // What actually travels back to the phone app: the percent-encoded config.
+    // Measure that, not the raw JSON — base64's '+' and '/' triple in length
+    // under encodeURIComponent, so raw JSON badly understates the real payload.
+    var SOFT_WARN_CHARS = 600000;
+    var TOO_LARGE_MSG = 'Too large to save — remove some uploaded photos.';
+    function encodedCfgSize() {
+      return encodeURIComponent(JSON.stringify(outboundCfg())).length;
+    }
+    // Photos added on this visit and not yet sent (all of cfg.uploads under v2).
+    function pendingCount() { return INCREMENTAL ? Object.keys(cfg.uploads).length : 0; }
+
+    function selectedCount() {
+      return cfg.galleries.reduce(function (n, g) { return n + (g.enabled ? g.items.length : 0); }, 0);
+    }
+    function selectionError() {
+      return selectedCount() > PebbleImage.MAX_SELECTION
+        ? 'Choose at most 64 photos across enabled galleries before saving.' : '';
+    }
+    function updateStatus() {
+      var chars = encodedCfgSize(); // once per render; a few ms even at 100s of KB
+      var kb = (chars / 1024).toFixed(1);
+      var n = INCREMENTAL ? Object.keys(thumbs).length : Object.keys(cfg.uploads).length;
+      var pending = pendingCount();
+      // The size only matters when it's a problem, so it stays out of the
+      // happy-path status and shows up with the warnings below.
+      statusEl.textContent = cfg.galleries.length + ' galleries, ' + n + ' upload(s)' +
+        (pending ? ' (' + pending + ' new, sent on save)' : '') + ', ' + selectedCount() +
+        '/64 enabled photos. Up to 48 downloaded photos fit offline, depending on size.';
+      var over = chars > PebbleImage.MAX_CONFIG_URL_CHARS;
+      statusEl.style.color = (over || chars > SOFT_WARN_CHARS) ? 'var(--pico-del-color, #b00)' : '';
+      if (selectionError()) { statusEl.textContent = selectionError(); statusEl.style.color = 'var(--pico-del-color, #b00)'; }
+      else if (over) { statusEl.textContent += ' — ' + TOO_LARGE_MSG; }
+      else if (chars > SOFT_WARN_CHARS) {
+        statusEl.textContent += INCREMENTAL
+          ? ' — save soon: this batch of new photos is getting large (~' + kb + ' KB).'
+          : ' — config large (~' + kb + ' KB); consider fewer uploads.';
+      }
+    }
+
+    function removeItem(gi, idx) {
+      var ref = cfg.galleries[gi].items[idx];
+      cfg.galleries[gi].items.splice(idx, 1);
+      // Drop orphaned upload bytes so the config doesn't bloat.
+      if (ref.charAt(0) === 'u') {
+        var id = ref.slice(2), used = false;
+        cfg.galleries.forEach(function (g) { if (g.items.indexOf('u:' + id) >= 0) { used = true; } });
+        if (!used) { delete cfg.uploads[id]; delete thumbs[id]; delete newThumbs[id]; }
+      }
+      render();
+    }
+
+    function addLibrary(gi, key) {
+      var ref = libRef(LIB[key]);
+      if (cfg.galleries[gi].items.indexOf(ref) < 0) { cfg.galleries[gi].items.push(ref); }
+      previewBuiltin(LIB[key].file, LIB[key].name);
+      render();
+    }
+
+    // Uploads: every picked file goes through the cropper (../shared/face-crop.js)
+    // and is then converted, one at a time (each decode holds a full-size
+    // bitmap; doing them in parallel on a phone is how you run out of memory).
+    // A file that fails keeps its error on screen but does not stop the rest.
+    // The gallery re-renders once at the end.
+    //
+    // Everything added here goes to the phone in ONE save URL, so there is a
+    // per-visit budget (MAX_CONFIG_URL_CHARS). Under v2 the budget is spent
+    // only on this visit's photos: when it runs out the page asks for a save
+    // and the user comes back for the rest. The gallery itself is not capped
+    // by it.
+    //
+    // replaceAt (optional): gallery index whose photo this pick replaces —
+    // the "re-crop" action. The page only holds the watch-size crop, so
+    // re-cropping means picking the photo again from the phone.
+    function handleUploads(gi, files, replaceAt) {
+      var list = Array.prototype.slice.call(files || []);
+      if (!list.length) { return; }
+      var added = 0, failed = [], left = 0, stop = '', autoAll = false;
+      var replacing = (typeof replaceAt === 'number') ? replaceAt : null;
+      function done() {
+        var msg = added + ' photo' + (added === 1 ? '' : 's') + (replacing === null && added ? ' added' : (added ? ' replaced' : ' added'));
+        if (failed.length) { msg += '; skipped ' + failed.length + ': ' + failed.join('; '); }
+        render();  // render() writes its own status line; ours goes on top of it
+        if (stop === 'budget') {
+          msg += INCREMENTAL
+            ? '. Save now to send ' + (added === 1 ? 'it' : 'them') + ', then add the other ' + left + '.'
+            : '. ' + TOO_LARGE_MSG + ' (' + left + ' not added.)';
+          statusEl.style.color = 'var(--pico-del-color, #b00)';
+        } else if (stop === 'cancel' && left) {
+          msg += '; ' + left + ' not added.';
+        }
+        statusEl.textContent = msg;
+      }
+      // Put the converted photo into the gallery, within budget.
+      function accept(src, crop, rect, r) {
+        var id = String(Date.now()) + Math.floor(Math.random() * 1000);
+        var items = cfg.galleries[gi].items, oldRef = null;
+        cfg.uploads[id] = r.b64;
+        thumbs[id] = makeThumb(src, crop, rect);
+        if (INCREMENTAL) { newThumbs[id] = thumbs[id]; }
+        if (replacing !== null && replacing < items.length) { oldRef = items[replacing]; items[replacing] = 'u:' + id; }
+        else { items.push('u:' + id); }
+        if (encodedCfgSize() > PebbleImage.MAX_CONFIG_URL_CHARS) {
+          // Over budget with this one in: take it back out and stop here.
+          if (oldRef !== null) { items[replacing] = oldRef; } else { items.pop(); }
+          delete cfg.uploads[id]; delete thumbs[id]; delete newThumbs[id];
+          return false;
+        }
+        if (oldRef !== null && oldRef.charAt(0) === 'u') {
+          var oid = oldRef.slice(2), used = false;
+          cfg.galleries.forEach(function (g) { if (g.items.indexOf(oldRef) >= 0) { used = true; } });
+          if (!used) { delete cfg.uploads[oid]; delete thumbs[oid]; delete newThumbs[oid]; }
+        }
+        added++;
+        setPreview(dataUrl(r.b64), 'Upload (' + r.bytes + ' bytes)');
+        return true;
+      }
+      // orig/url: the decoded original and its object URL, kept alive until the
+      // conversion is done. A working canvas that has been displayed and pulled
+      // out of the DOM can, rarely, read back blank (one flat colour); when the
+      // conversion comes back that way it is redone once from the original.
+      function convert(src, crop, rect, name, i, orig, url, retried) {
+        statusEl.textContent = 'Converting ' + (name || 'photo') + '…';
+        PebbleImage.processImage(src, { crop: crop, rect: rect }).then(function (r) {
+          if (r.colors <= 1 && orig && !retried) {
+            convert(workingCopy(orig), crop, rect, name, i, orig, url, true); return;
+          }
+          URL.revokeObjectURL(url);
+          if (r.bytes > PebbleImage.MAX_IMAGE_BYTES) {
+            failed.push((name || 'image') + ' too detailed after conversion (' +
+              Math.round(r.bytes / 1024) + 'kb > ' +
+              Math.round(PebbleImage.MAX_IMAGE_BYTES / 1024) + 'kb)');
+            next(i + 1); return;
+          }
+          if (!accept(src, crop, rect, r)) { stop = 'budget'; left = list.length - i; done(); return; }
+          next(i + 1);
+        }, function () { URL.revokeObjectURL(url); failed.push((name || 'image') + ' could not be converted'); next(i + 1); });
+      }
+      function next(i) {
+        if (i >= list.length) { done(); return; }
+        var file = list[i];
+        statusEl.textContent = 'Loading photo ' + (i + 1) + ' of ' + list.length + '…';
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function () {
+          var src = workingCopy(img);
+          var choice = autoAll ? Promise.resolve({ action: 'asis' }) : FaceCrop.open(src, {
+            remaining: list.length - i - 1,
+            preview: function (rect, fit) {
+              return PebbleImage.processImage(src, { crop: !fit, rect: rect }).then(function (r) { return dataUrl(r.b64); });
+            }
+          });
+          choice.then(function (res) {
+            if (res.action === 'cancel') { URL.revokeObjectURL(url); stop = 'cancel'; left = list.length - i; done(); return; }
+            if (res.action === 'skip') { URL.revokeObjectURL(url); next(i + 1); return; }
+            if (res.action === 'all') { autoAll = true; res = { action: 'asis' }; }
+            if (res.action === 'asis') { convert(src, true, null, file.name, i, img, url); }
+            else { convert(src, !res.fit, res.rect, file.name, i, img, url); }
+          });
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); failed.push((file.name || 'image') + ' could not be loaded'); next(i + 1); };
+        img.src = url;
+      }
+      next(0);
+    }
+
+    // Re-crop = pick the photo again (single file) into the same gallery slot.
+    function pickReplacement(gi, idx) {
+      var input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.style.position = 'fixed'; input.style.left = '-9999px';
+      input.addEventListener('change', function () {
+        var files = input.files;
+        input.remove();
+        if (files && files.length) { handleUploads(gi, [files[0]], idx); }
+      });
+      document.body.appendChild(input);
+      input.click();
+    }
+
+    // --- Rendering ---------------------------------------------------------
+    function galleryCard(gal, gi) {
+      var card = document.createElement('article');
+      if (!gal.enabled) { card.className = 'disabled'; }
+
+      // Header (one line): name + "Loop at end" toggle + enabled + delete.
+      var head = document.createElement('div'); head.className = 'ghead';
+      var name = document.createElement('input');
+      name.type = 'text'; name.value = gal.name; name.placeholder = 'Gallery name';
+      name.addEventListener('input', function () { gal.name = name.value; });
+
+      // End behavior as a toggle: on = loop this gallery, off = advance to the next.
+      var endLabel = document.createElement('label');
+      endLabel.title = 'On: loop this gallery · Off: advance to the next gallery';
+      var end = document.createElement('input'); end.type = 'checkbox';
+      end.setAttribute('role', 'switch'); end.checked = gal.end !== 'next';
+      end.addEventListener('change', function () { gal.end = end.checked ? 'loop' : 'next'; });
+      endLabel.appendChild(end); endLabel.appendChild(document.createTextNode(' Loop'));
+
+      var enLabel = document.createElement('label');
+      var en = document.createElement('input'); en.type = 'checkbox';
+      en.setAttribute('role', 'switch'); en.checked = !!gal.enabled;
+      en.addEventListener('change', function () { gal.enabled = en.checked; render(); });
+      enLabel.appendChild(en); enLabel.appendChild(document.createTextNode(' On'));
+
+      var ctrls = document.createElement('div'); ctrls.className = 'gctrls';
+      ctrls.appendChild(endLabel); ctrls.appendChild(enLabel);
+      head.appendChild(name); head.appendChild(ctrls);
+      card.appendChild(head);
+
+      // Current items.
+      var strip = document.createElement('div'); strip.className = 'strip';
+      gal.items.forEach(function (ref, idx) {
+        var t = document.createElement('div'); t.className = 'thumb';
+        var im = document.createElement('img'); im.src = refThumb(ref); im.alt = refLabel(ref);
+        im.loading = 'lazy';
+        im.addEventListener('click', function () { setPreview(refThumb(ref), refLabel(ref)); });
+        var x = document.createElement('button'); x.className = 'x contrast'; x.textContent = '×';
+        x.title = 'Remove'; x.addEventListener('click', function () { removeItem(gi, idx); });
+        t.appendChild(im); t.appendChild(x);
+        if (ref.charAt(0) === 'u') {
+          var rc = document.createElement('button'); rc.type = 'button'; rc.className = 'recrop';
+          // Inline SVG scissors: a glyph would sit on font metrics (off-centre)
+          // and Android renders U+2702 as an emoji.
+          rc.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>' +
+            '<line x1="8.2" y1="8.2" x2="20" y2="20"/><line x1="8.2" y1="15.8" x2="20" y2="4"/></svg>';
+          rc.setAttribute('aria-label', 'Re-crop');
+          rc.title = 'Re-crop: pick this photo again and crop it differently';
+          rc.addEventListener('click', function (e) { e.stopPropagation(); pickReplacement(gi, idx); });
+          t.appendChild(rc);
+        }
+        strip.appendChild(t);
+      });
+      card.appendChild(strip);
+
+      // Bottom row: quiet remove link (destructive action demoted from the
+      // header, two-tap via confirm) + the add-photos toggle.
+      var foot = document.createElement('div'); foot.className = 'gfoot';
+      var del = document.createElement('button');
+      del.className = 'delgal'; del.textContent = 'Remove gallery';
+      del.addEventListener('click', function () {
+        if (cfg.galleries.length <= 1) { alert('Keep at least one gallery.'); return; }
+        if (del.textContent !== 'Really remove?') { del.textContent = 'Really remove?'; return; }
+        cfg.galleries.splice(gi, 1); if (expanded === gi) { expanded = null; } render();
+      });
+      var addBtn = document.createElement('button');
+      addBtn.className = 'addphotos outline'; addBtn.textContent = expanded === gi ? 'Done adding' : '＋ Add photos';
+      addBtn.addEventListener('click', function () { expanded = expanded === gi ? null : gi; render(); });
+      foot.appendChild(del); foot.appendChild(addBtn);
+      card.appendChild(foot);
+
+      if (expanded === gi) { card.appendChild(pickerPanel(gi, gal)); }
+      return card;
+    }
+
+    function pickerPanel(gi, gal) {
+      var p = document.createElement('div'); p.className = 'picker';
+
+      // Uploading your own photos is the point of the face — it leads the
+      // panel, above the built-in library.
+      var up = document.createElement('label');
+      up.className = 'upload';
+      up.textContent = ANDROID_APP ? 'Upload a photo' : 'Upload your own photos';
+      var file = document.createElement('input'); file.type = 'file'; file.accept = 'image/*';
+      // One file at a time inside the Android Pebble app. It hands the picker
+      // result to WebChromeClient.FileChooserParams.parseResult, which reads only
+      // Intent.getData() and ignores the ClipData a multi-selection comes back
+      // as: pick two or more photos and the page receives nothing, with no error
+      // (coredevices/mobileapp WatchappSettingsScreen.android.kt; Chromium
+      // AwContentsClient.parseFileChooserResult). Single picks work.
+      file.multiple = !ANDROID_APP;
+      up.appendChild(file);
+      file.addEventListener('change', function (e) {
+        handleUploads(gi, e.target.files);
+        e.target.value = '';  // picking the same files again must fire change again
+      });
+      p.appendChild(up);
+      var hint = document.createElement('small');
+      hint.textContent = 'Each photo opens in a cropper: drag and zoom to choose what the watch shows, or add it as is.';
+      p.appendChild(hint);
+
+      var h = document.createElement('small');
+      h.textContent = (ANDROID_APP ? 'One photo per pick on Android; add more the same way. ' : '') +
+        'Or tap a library photo to add it (\u25cf = stored on the watch, shows offline):';
+      p.appendChild(h);
+      CATS.forEach(function (c) {
+        var cap = document.createElement('h4'); cap.className = 'pickcat'; cap.textContent = c.name;
+        p.appendChild(cap);
+        var grid = document.createElement('div'); grid.className = 'gallery';
+        GALLERY.forEach(function (g) {
+          if (g.cat !== c.name) { return; }
+          var cell = document.createElement('span'); cell.className = 'libcell';
+          var im = document.createElement('img'); im.src = g.file; im.alt = g.name; im.loading = 'lazy';
+          if (gal.items.indexOf(libRef(g)) >= 0) { im.className = 'added'; }
+          im.addEventListener('click', function () { addLibrary(gi, g.key); });
+          cell.appendChild(im);
+          if (g.bundled) {
+            var dot = document.createElement('span'); dot.className = 'ondevice'; dot.textContent = '\u25cf';
+            dot.title = 'Stored on the watch';
+            cell.appendChild(dot);
+          }
+          grid.appendChild(cell);
+        });
+        p.appendChild(grid);
+      });
+
+      return p;
+    }
+
+    function render() {
+      galleriesEl.innerHTML = '';
+      cfg.galleries.forEach(function (gal, gi) { galleriesEl.appendChild(galleryCard(gal, gi)); });
+      shuffleEl.checked = !!cfg.shuffle;
+      updateStatus();
+    }
+
+    shuffleEl.addEventListener('change', function () { cfg.shuffle = shuffleEl.checked; });
+
+    // Face settings. Each maps to an S_* message key the watch persists; the
+    // watch owns the rotation timer and the shake handler, we only set them.
+    // Binding + the live watch preview come from the shared face-config.js;
+    // fill any key an older PKJS didn't send before handing cfg over.
+    (function () {
+      var d = defaultCfg();
+      ['rotateMin', 'shake', 'clockPos', 'timeFmt', 'seconds', 'tempUnit', 'font', 'fontAll', 'fontSize', 'color', 'bg'].forEach(function (k) {
+        if (cfg[k] === undefined) { cfg[k] = d[k]; }
+      });
+      // The library changes across releases; saved configs outlive it. Drop
+      // library refs that no longer resolve and normalize b:/r: prefixes to
+      // the current bundled set, so gallery cards never render broken thumbs.
+      (cfg.galleries || []).forEach(function (gal) {
+        gal.items = (gal.items || []).filter(function (ref) {
+          return ref.charAt(0) === 'u' || LIB[ref.slice(2)];
+        }).map(function (ref) {
+          return ref.charAt(0) === 'u' ? ref : libRef(LIB[ref.slice(2)]);
+        });
+      });
+      // Toggle-era config from an older PKJS: enabled points migrate to the
+      // cell under the clock, in the old fixed order.
+      if (!cfg.grid) {
+        var under = cfg.clockPos * 3 + 2;
+        cfg.grid = [];
+        [['date', cfg.showDate], ['batt', cfg.showBatt], ['steps', cfg.showSteps],
+         ['temp', cfg.showTemp], ['hr', cfg.showHr]].forEach(function (p) {
+          if (p[1]) { cfg.grid.push({ k: p[0], pos: under }); }
+        });
+      }
+    })();
+    var ui = FaceConfig.attachGrid(cfg, {
+      list: document.getElementById('dplist'),
+      onChange: function () {
+        // The unit picker only matters while temperature is on the watch.
+        document.getElementById('unitrow').style.display = ui && ui.has('temp') ? '' : 'none';
+      }
+    });
+    var bindSwitch = ui.bindSwitch;
+    var bindSelect = ui.bindSelect;
+    bindSwitch('shake', 'shake');
+    bindSelect('rotate', 'rotateMin');
+    bindSelect('clockpos', 'clockPos');
+    bindSelect('timefmt', 'timeFmt');
+    bindSelect('seconds', 'seconds');
+    bindSelect('fontall', 'fontAll');
+    bindSelect('fontsize', 'fontSize');
+    bindSelect('font', 'font');
+    bindSelect('color', 'color');
+    bindSelect('bg', 'bg');
+    bindSelect('tempunit', 'tempUnit');
+    document.getElementById('unitrow').style.display = ui.has('temp') ? '' : 'none';
+    document.getElementById('addgal').addEventListener('click', function () {
+      cfg.galleries.push({ id: 'g' + Date.now(), name: 'New gallery', enabled: true, end: 'loop', items: [] });
+      expanded = cfg.galleries.length - 1; render();
+    });
+    document.getElementById('save').addEventListener('click', function () {
+      if (selectionError()) { statusEl.textContent = selectionError(); statusEl.style.color = 'var(--pico-del-color, #b00)'; return; }
+      // Never navigate with an oversized payload: the phone app would drop it
+      // silently and the user would think the save worked.
+      if (encodedCfgSize() > PebbleImage.MAX_CONFIG_URL_CHARS) {
+        statusEl.textContent = TOO_LARGE_MSG;
+        statusEl.style.color = 'var(--pico-del-color, #b00)';
+        return;
+      }
+      try { PebbleImage.closeConfig(outboundCfg()); }
+      catch (err) { statusEl.textContent = err.message; }
+    });
+
+    // --- Sticky save bar: appears once the config differs from what PKJS
+    // sent. Baseline is captured AFTER the fills/migrations above, so opening
+    // the page never counts as an edit; polling beats instrumenting every one
+    // of the ~20 mutation sites, and stringify of even a big config is ~2ms.
+    (function () {
+      var savebar = document.getElementById('savebar');
+      var baseline = null;
+      setTimeout(function () { baseline = JSON.stringify(cfg); }, 0);
+      setInterval(function () {
+        if (baseline === null) { return; }
+        savebar.classList.toggle('dirty', JSON.stringify(cfg) !== baseline);
+      }, 700);
+    })();
+
+    render();
+    // Seed the preview with the first photo, if any.
+    (function () {
+      for (var g = 0; g < cfg.galleries.length; g++) {
+        if (cfg.galleries[g].items.length) {
+          var ref = cfg.galleries[g].items[0];
+          var lib = (ref.charAt(0) === 'b' || ref.charAt(0) === 'r') && LIB[ref.slice(2)];
+          if (lib) { previewBuiltin(lib.file, refLabel(ref)); }
+          else { setPreview(refThumb(ref), refLabel(ref)); }
+          break;
+        }
+      }
+    })();
+// ==== v2 prototype: chips, 64-color palette, per-image overrides =======
+    (function () {
+      function $id(id) { return document.getElementById(id); }
+      function syncFrom(selectEl, wrap) {
+        var v = selectEl.value;
+        Array.prototype.forEach.call(wrap.children, function (c) {
+          if (c.dataset.v !== undefined) { c.classList.toggle('on', c.dataset.v === v); }
+        });
+      }
+      function chips(selectId, wrapId, make) {
+        var s = $id(selectId), wrap = $id(wrapId);
+        Array.prototype.forEach.call(s.options, function (o) {
+          var b = make(o);
+          b.type = 'button'; b.dataset.v = o.value;
+          b.addEventListener('click', function () {
+            s.value = o.value;
+            s.dispatchEvent(new Event('change'));
+          });
+          wrap.appendChild(b);
+        });
+        s.addEventListener('change', function () { syncFrom(s, wrap); });
+        syncFrom(s, wrap);
+      }
+      function plain(o) {
+        var b = document.createElement('button');
+        b.className = 'chip'; b.textContent = o.textContent;
+        return b;
+      }
+      chips('clockpos', 'chips-clockpos', plain);
+      chips('timefmt', 'chips-timefmt', plain);
+      chips('bg', 'chips-bg', plain);
+      chips('fontsize', 'chips-fontsize', plain);
+      chips('font', 'chips-font', function (o) {
+        var b = document.createElement('button');
+        b.className = 'fontchip fs' + o.value;
+        b.innerHTML = '<span class="t">10:08</span><small></small>';
+        b.querySelector('small').textContent = o.textContent;
+        return b;
+      });
+      var ss = $id('seconds'), tab = $id('sstab');
+      $id('chips-timefmt').appendChild(tab);  // flows right after 24h, wraps with the row
+      var fa = $id('fontall'), fasw = $id('fontallsw');
+      function syncFA() { fasw.checked = fa.value === '1'; }
+      fasw.addEventListener('change', function () {
+        fa.value = fasw.checked ? '1' : '0';
+        fa.dispatchEvent(new Event('change'));
+      });
+      fa.addEventListener('change', syncFA); syncFA();
+      function syncSS() { tab.classList.toggle('on', ss.value === '1'); }
+      tab.addEventListener('click', function () {
+        ss.value = ss.value === '1' ? '0' : '1';
+        ss.dispatchEvent(new Event('change'));
+      });
+      ss.addEventListener('change', syncSS); syncSS();
+
+      // --- The 64 colors Emery can actually show: every channel is one of
+      // 0/85/170/255 (2 bits each, 4^3 = 64 — the same fixed palette the
+      // photo converter dithers against). Ordered like the Pebble color
+      // chart: grays first, then sorted by hue so the families read as
+      // gradients instead of looking like accidental duplicates.
+      var PAL = ['#000000', '#555555', '#aaaaaa', '#ffffff', '#550000', '#aa0000',
+        '#aa5555', '#ff0000', '#ff5555', '#ffaaaa', '#aa5500', '#ff5500', '#ffaa00',
+        '#ffaa55', '#555500', '#aaaa00', '#aaaa55', '#ffff00', '#ffff55', '#ffffaa',
+        '#55aa00', '#55ff00', '#aaff00', '#aaff55', '#005500', '#00aa00', '#00ff00',
+        '#55aa55', '#55ff55', '#aaffaa', '#00aa55', '#00ff55', '#00ffaa', '#55ffaa',
+        '#005555', '#00aaaa', '#00ffff', '#55aaaa', '#55ffff', '#aaffff', '#0055aa',
+        '#0055ff', '#00aaff', '#55aaff', '#000055', '#0000aa', '#0000ff', '#5555aa',
+        '#5555ff', '#aaaaff', '#5500aa', '#5500ff', '#aa00ff', '#aa55ff', '#550055',
+        '#aa00aa', '#aa55aa', '#ff00ff', '#ff55ff', '#ffaaff', '#aa0055', '#ff0055',
+        '#ff00aa', '#ff55aa'];
+      var pop = $id('palpop'), grid = $id('palgrid'), onPickCb = null;
+      PAL.forEach(function (hex) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.style.background = hex; b.dataset.hex = hex; b.title = hex;
+        b.addEventListener('click', function () {
+          if (onPickCb) { onPickCb(hex); }
+          pop.classList.remove('show');
+        });
+        grid.appendChild(b);
+      });
+      function openPalette(title, current, onPick) {
+        $id('paltitle').textContent = title;
+        Array.prototype.forEach.call(grid.children, function (c) {
+          c.classList.toggle('on', c.dataset.hex === current);
+        });
+        onPickCb = onPick;
+        pop.classList.add('show');
+      }
+      $id('palcancel').addEventListener('click', function () { pop.classList.remove('show'); });
+      pop.addEventListener('click', function (e) { if (e.target === pop) { pop.classList.remove('show'); } });
+
+      // --- Ink: one well, tap opens the palette. White/black ride the legacy
+      // 0/1 wire; anything else is stored as cfg.inkHex for the upcoming
+      // ink-color key (the wire falls back to the nearer of white/black).
+      function lum(hex) {
+        return (parseInt(hex.slice(1, 3), 16) * 3 + parseInt(hex.slice(3, 5), 16) * 6 + parseInt(hex.slice(5, 7), 16)) / 2550;
+      }
+      var colorSel = $id('color');
+      function inkHex() { return cfg.inkHex || (colorSel.value === '1' ? '#000000' : '#ffffff'); }
+      var inkWell = document.createElement('button');
+      inkWell.type = 'button'; inkWell.className = 'well'; inkWell.title = 'Ink color';
+      var inkHint = document.createElement('span');
+      inkHint.className = 'wellhint'; inkHint.textContent = 'tap to choose · 64 colors';
+      $id('chips-color').appendChild(inkWell); $id('chips-color').appendChild(inkHint);
+      function paintInk() { inkWell.style.background = inkHex(); }
+      inkWell.addEventListener('click', function () {
+        openPalette('Ink · 64 Pebble colors', inkHex(), function (hex) {
+          if (hex === '#ffffff' || hex === '#000000') { delete cfg.inkHex; }
+          else { cfg.inkHex = hex; }
+          colorSel.value = lum(hex) >= 0.5 ? '0' : '1';
+          colorSel.dispatchEvent(new Event('change'));
+        });
+      });
+      colorSel.addEventListener('change', function () { paintInk(); });
+      paintInk();
+
+      // --- Bar color: AUTO keeps today's inverse-of-ink; a well overrides.
+      var barsw = $id('barsw'), bgSel = $id('bg');
+      var autoBtn = document.createElement('button');
+      autoBtn.type = 'button'; autoBtn.className = 'autochip'; autoBtn.textContent = 'AUTO';
+      autoBtn.title = 'Inverse of the ink color';
+      var barWell = document.createElement('button');
+      barWell.type = 'button'; barWell.className = 'well'; barWell.title = 'Bar color';
+      barsw.appendChild(autoBtn); barsw.appendChild(barWell);
+      function paintBar() {
+        autoBtn.classList.toggle('on', !cfg.barHex);
+        barWell.style.background = cfg.barHex || (lum(inkHex()) >= 0.5 ? '#000000' : '#ffffff');
+      }
+      autoBtn.addEventListener('click', function () { delete cfg.barHex; refreshLook(); });
+      barWell.addEventListener('click', function () {
+        openPalette('Bar · 64 Pebble colors', cfg.barHex || '', function (hex) {
+          cfg.barHex = hex; refreshLook();
+        });
+      });
+      function syncBarVis() { barsw.classList.toggle('show', bgSel.value === '1'); }
+      bgSel.addEventListener('change', function () { syncBarVis(); });
+      syncBarVis();
+
+      // --- Preview tint: re-apply hex colors after the shared preview runs.
+      var ovl = $id('ovl');
+      function applyHex() {
+        var ink = inkHex();
+        if (cfg.inkHex) {
+          ovl.style.color = ink;
+          document.querySelectorAll('#watch .stack').forEach(function (s) { s.style.color = ink; });
+        }
+        if (bgSel.value === '1' && cfg.barHex) {
+          document.querySelectorAll('#watch .bars div').forEach(function (d) {
+            d.style.background = cfg.barHex;
+          });
+        }
+        paintInk(); paintBar();
+      }
+      function refreshLook() {
+        if (window.ui) { ui.updatePreview(); }
+        applyHex();
+      }
+      // Shared code repaints on every change/click; ride the same events.
+      document.addEventListener('change', function () { setTimeout(applyHex, 0); }, true);
+      document.addEventListener('click', function () { setTimeout(applyHex, 0); }, true);
+      applyHex();
+
+      // --- Per-image overrides: clock position + ink per photo. Stored as
+      // cfg.overrides[ref] = { pos: 0|1|2, ink: '#rrggbb' } (either optional);
+      // the future wire sends them with each image push (OV_* keys, appended).
+      if (!cfg.overrides) { cfg.overrides = {}; }
+      var openSheetFor = null;  // ref of the open sheet, survives re-render
+      function ovOf(ref) { return cfg.overrides[ref] || null; }
+      function setOv(ref, patch) {
+        var o = cfg.overrides[ref] || {};
+        Object.keys(patch).forEach(function (k) {
+          if (patch[k] === null) { delete o[k]; } else { o[k] = patch[k]; }
+        });
+        if (Object.keys(o).length) { cfg.overrides[ref] = o; } else { delete cfg.overrides[ref]; }
+      }
+      function previewOv(ref) {
+        // Show THIS photo with its override on the big preview (approximate).
+        setPreview(refThumb(ref), refLabel(ref) + ' (override)');
+        var o = ovOf(ref) || {};
+        if (window.ui) { ui.updatePreview(); }
+        applyHex();
+        if (o.pos !== undefined) {
+          ovl.style.top = (o.pos === 0 ? 2 : o.pos === 1 ? 84 : 166) + 'px';
+        }
+        // Per-photo ink recolors the clock AND every data point (the bar
+        // backdrop is its own override below).
+        var stacks = document.querySelectorAll('#watch .stack');
+        if (o.ink) {
+          ovl.style.color = o.ink;
+          stacks.forEach(function (s) { s.style.color = o.ink; });
+        }
+        var effInk = o.ink || inkHex();
+        var op = lum(effInk) >= 0.5 ? '#000000' : '#ffffff';
+        var effBg = o.bg !== undefined ? o.bg : parseInt(bgSel.value, 10);
+        var effBar = o.bar || cfg.barHex || op;
+        // Bars live in the shared .bars underlay (full-width merged bands);
+        // an override recolors or clears those bands, never the text.
+        var barDivs = document.querySelectorAll('#watch .bars div');
+        if (effBg === 1) {
+          ovl.style.textShadow = 'none';
+          barDivs.forEach(function (d) { d.style.background = effBar; });
+          stacks.forEach(function (s) { s.style.textShadow = 'none'; });
+        } else {
+          var sh2 = effBg === 0 ? ('2px 2px 0 ' + op) : 'none';
+          ovl.style.textShadow = sh2;
+          barDivs.forEach(function (d) { d.style.display = 'none'; });
+          stacks.forEach(function (s) {
+            s.style.textShadow = effBg === 0 ? ('1px 1px 0 ' + op) : 'none';
+          });
+        }
+      }
+      // Mini watch: THIS image with the effective clock + data points on it.
+      function ovMini(ref, o) {
+        var mini = document.createElement('div'); mini.className = 'ovmini';
+        var im = document.createElement('img'); im.src = refThumb(ref); im.alt = '';
+        mini.appendChild(im);
+        var effInk = o.ink || inkHex();
+        var op = lum(effInk) >= 0.5 ? '#000000' : '#ffffff';
+        var effBg = o.bg !== undefined ? o.bg : parseInt(bgSel.value, 10);
+        var effBar = effBg === 1 ? (o.bar || cfg.barHex || op) : 'transparent';
+        var pos = o.pos !== undefined ? o.pos : parseInt($id('clockpos').value, 10);
+        var FONTS = {
+          0: '800 19px "Helvetica Neue", Arial, sans-serif',
+          1: '300 19px "Helvetica Neue", Arial, sans-serif',
+          2: '700 17px "Courier New", monospace',
+          3: '400 20px "VT323", monospace',
+          4: '400 14px "Permanent Marker", cursive',
+          5: '400 15px "Special Elite", serif',
+          6: '400 14px "Monoton", cursive',
+          7: '400 16px "Abril Fatface", serif',
+          8: '400 14px "Black Ops One", cursive',
+          9: '400 12px "DSEG7-Classic", monospace'
+        };
+        var clk = document.createElement('div'); clk.className = 'mclk';
+        clk.textContent = ($id('timefmt').value === '2' ? '22:08' : '10:08') +
+                          ($id('seconds').value === '1' ? ':42' : '');
+        clk.style.font = FONTS[parseInt($id('font').value, 10)] || FONTS[0];
+        var inf = document.createElement('div'); inf.className = 'minf';
+        var parts = [];
+        (cfg.grid || []).forEach(function (e) {
+          var d = (window.FaceConfig && FaceConfig.DATA_POINTS || []).filter(function (x) { return x.k === e.k; })[0];
+          if (d && e.k !== 'spin') { parts.push(d.sample(cfg)); }
+        });
+        inf.textContent = parts.join(' \u00b7 ') || 'WED 30';
+        [clk, inf].forEach(function (el) {
+          el.style.color = effInk;
+          el.style.background = effBar;
+          el.style.textShadow = effBg === 0 ? ('1px 1px 0 ' + op) : 'none';
+        });
+        // Only the CLOCK follows a position override — data points live at
+        // their grid cells, which the mini approximates from the GLOBAL
+        // clock position (mirrors the watch: OV_POS moves nothing else).
+        var mapTop = function (p2) { return p2 === 0 ? 2 : p2 === 1 ? 42 : 76; };
+        var gpos = parseInt($id('clockpos').value, 10) || 0;
+        clk.style.top = mapTop(pos) + 'px';
+        inf.style.top = (mapTop(gpos) + 22) + 'px';
+        mini.appendChild(clk); mini.appendChild(inf);
+        return mini;
+      }
+      function ovSheet(ref) {
+        var sh = document.createElement('div'); sh.className = 'ovsheet';
+        var o = ovOf(ref) || {};
+        var head = document.createElement('div'); head.className = 'ovhead';
+        head.innerHTML = '<b>This photo</b><small>overrides the defaults above</small>';
+        var close = document.createElement('button');
+        close.type = 'button'; close.className = 'close secondary'; close.textContent = 'Done';
+        close.addEventListener('click', function () { openSheetFor = null; render(); refreshLook(); });
+        head.appendChild(close); sh.appendChild(head);
+
+        var body = document.createElement('div'); body.className = 'ovbody';
+        body.appendChild(ovMini(ref, o));
+        var rows = document.createElement('div'); rows.className = 'ovrows';
+        body.appendChild(rows); sh.appendChild(body);
+
+        var rowP = document.createElement('div'); rowP.className = 'ovrow';
+        rowP.innerHTML = '<span class="rowcap">Clock</span>';
+        ['Default', 'Top', 'Middle', 'Bottom'].forEach(function (name, i) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'chip';
+          b.textContent = name;
+          var val = i === 0 ? null : i - 1;
+          b.classList.toggle('on', val === null ? o.pos === undefined : o.pos === val);
+          b.addEventListener('click', function () {
+            setOv(ref, { pos: val });
+            openSheetFor = ref; render(); previewOv(ref);
+          });
+          rowP.appendChild(b);
+        });
+        rows.appendChild(rowP);
+
+        var rowI = document.createElement('div'); rowI.className = 'ovrow';
+        rowI.innerHTML = '<span class="rowcap">Ink</span>';
+        var dflt = document.createElement('button');
+        dflt.type = 'button'; dflt.className = 'autochip';
+        dflt.textContent = 'DEFAULT'; dflt.classList.toggle('on', !o.ink);
+        dflt.addEventListener('click', function () {
+          setOv(ref, { ink: null }); openSheetFor = ref; render(); previewOv(ref);
+        });
+        var well = document.createElement('button');
+        well.type = 'button'; well.className = 'well';
+        well.style.background = o.ink || inkHex();
+        well.addEventListener('click', function () {
+          openPalette('This photo · ink', o.ink || inkHex(), function (hex) {
+            setOv(ref, { ink: hex }); openSheetFor = ref; render(); previewOv(ref);
+          });
+        });
+        rowI.appendChild(dflt); rowI.appendChild(well);
+        rows.appendChild(rowI);
+
+        var rowT = document.createElement('div'); rowT.className = 'ovrow';
+        rowT.innerHTML = '<span class="rowcap">Backdrop</span>';
+        [['Default', null], ['Drop shadow', 0], ['Solid bar', 1], ['None', 2]].forEach(function (opt) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'chip';
+          b.textContent = opt[0];
+          var val = opt[1];
+          b.classList.toggle('on', val === null ? o.bg === undefined : o.bg === val);
+          b.addEventListener('click', function () {
+            setOv(ref, { bg: val });
+            openSheetFor = ref; render(); previewOv(ref);
+          });
+          rowT.appendChild(b);
+        });
+        rows.appendChild(rowT);
+
+        var rowB = document.createElement('div'); rowB.className = 'ovrow';
+        rowB.innerHTML = '<span class="rowcap">Bar</span>';
+        var bDflt = document.createElement('button');
+        bDflt.type = 'button'; bDflt.className = 'autochip';
+        bDflt.textContent = 'DEFAULT'; bDflt.classList.toggle('on', !o.bar);
+        bDflt.title = 'The global backdrop settings';
+        bDflt.addEventListener('click', function () {
+          setOv(ref, { bar: null }); openSheetFor = ref; render(); previewOv(ref);
+        });
+        var bWell = document.createElement('button');
+        bWell.type = 'button'; bWell.className = 'well';
+        bWell.style.background = o.bar || (cfg.barHex || (lum(inkHex()) >= 0.5 ? '#000000' : '#ffffff'));
+        bWell.title = 'Backdrop bar color for this photo';
+        bWell.addEventListener('click', function () {
+          openPalette('This photo · bar color', o.bar || cfg.barHex || '', function (hex) {
+            setOv(ref, { bar: hex }); openSheetFor = ref; render(); previewOv(ref);
+          });
+        });
+        rowB.appendChild(bDflt); rowB.appendChild(bWell);
+        rows.appendChild(rowB);
+        return sh;
+      }
+      // Decorate every gallery card render with pencil badges + open sheet.
+      var origCard = galleryCard;
+      galleryCard = function (gal, gi) {
+        var card = origCard(gal, gi);
+        var thumbs = card.querySelectorAll('.strip .thumb');
+        Array.prototype.forEach.call(thumbs, function (th, idx) {
+          var ref = gal.items[idx];
+          if (!ref) { return; }
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'ovbtn' + (ovOf(ref) ? ' marked' : '');
+          b.textContent = '✎'; b.title = 'Clock & ink for this photo';
+          b.addEventListener('click', function (e) {
+            e.stopPropagation();
+            openSheetFor = openSheetFor === ref ? null : ref;
+            render();
+            if (openSheetFor) { previewOv(ref); }
+          });
+          th.appendChild(b);
+        });
+        if (openSheetFor && gal.items.indexOf(openSheetFor) >= 0) {
+          // The sheet slots INTO the photo grid right below the edited
+          // image's row (full-width grid item), not after the whole gallery.
+          var strip = card.querySelector('.strip');
+          var idx = gal.items.indexOf(openSheetFor);
+          var cols = parseInt(getComputedStyle(document.documentElement)
+                       .getPropertyValue('--gallery-cols'), 10) || 3;
+          var rowEnd = Math.min(Math.ceil((idx + 1) / cols) * cols, gal.items.length) - 1;
+          var anchor = strip.querySelectorAll('.thumb')[rowEnd];
+          strip.insertBefore(ovSheet(openSheetFor), anchor ? anchor.nextSibling : null);
+        }
+        return card;
+      };
+      // Discard: reload restores the exact config the page was opened with
+      // (it lives in the URL hash), throwing away every unsaved change.
+      $id('discard').addEventListener('click', function () { location.reload(); });
+      render();
+    })();
+  </script>
+</body>
+</html>

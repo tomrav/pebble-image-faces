@@ -1,0 +1,11 @@
+[
+{"sel":["b:char/totoro"],"font":0,"fontAll":1,"fontSize":1,"clockPos":2,"timeFmt":1,"seconds":0,"bg":0,"color":0,"grid":[{"k":"date","pos":8},{"k":"batt","pos":3}]},
+{"sel":["b:char/no-face"],"font":6,"fontAll":1,"fontSize":1,"clockPos":1,"timeFmt":1,"seconds":0,"bg":0,"color":0,"inkHex":"#FFAAFF","grid":[{"k":"date","pos":2},{"k":"batt","pos":8}]},
+{"sel":["b:char/calcifer"],"font":7,"fontAll":1,"fontSize":0,"clockPos":0,"timeFmt":1,"seconds":0,"bg":1,"color":1,"inkHex":"#550000","barHex":"#FFFF55","grid":[{"k":"date","pos":1},{"k":"temp","pos":3},{"k":"cond","pos":3}]},
+{"sel":["b:char/kiki"],"font":4,"fontAll":1,"fontSize":2,"clockPos":2,"timeFmt":1,"seconds":0,"bg":0,"color":0,"grid":[{"k":"date","pos":8},{"k":"cond","pos":1},{"k":"temp","pos":1},{"k":"batt","pos":3}]},
+{"sel":["b:char/ponyo"],"font":3,"fontAll":1,"fontSize":1,"clockPos":2,"timeFmt":1,"seconds":0,"bg":1,"color":0,"inkHex":"#FFFFFF","barHex":"#0055AA","grid":[{"k":"temp","pos":7},{"k":"batt","pos":9}]},
+{"sel":["b:char/catbus"],"font":9,"fontAll":1,"fontSize":1,"clockPos":2,"timeFmt":1,"seconds":1,"bg":0,"color":0,"inkHex":"#FFFF55","grid":[{"k":"date","pos":2},{"k":"batt","pos":3}]},
+{"sel":["b:char/chihiro-ogino"],"font":5,"fontAll":1,"fontSize":1,"clockPos":1,"timeFmt":1,"seconds":0,"bg":0,"color":0,"grid":[{"k":"date","pos":8},{"k":"temp","pos":2},{"k":"cond","pos":2}]},
+{"sel":["b:char/howl"],"font":1,"fontAll":1,"fontSize":2,"clockPos":0,"timeFmt":1,"seconds":0,"bg":0,"color":0,"grid":[{"k":"date","pos":8},{"k":"batt","pos":9},{"k":"temp","pos":7}]},
+{"sel":["b:char/porco-rosso-character"],"font":8,"fontAll":1,"fontSize":1,"clockPos":2,"timeFmt":1,"seconds":0,"bg":0,"color":0,"inkHex":"#FFFFAA","grid":[{"k":"date","pos":8},{"k":"batt","pos":1}]}
+]

@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Local secrets
+.env
+
+# Agent local state
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Test artifacts (emulator screenshots)
+artifacts/
+
+# Pebble / Waf build artifacts
+**/build/
+**/.lock-waf_*
+**/*.pbw
+**/pebble-app.map
+
+# Pebble generated headers and sources outside build dirs
+**/message_keys.auto.*
+**/resource_ids.auto.*
+
+*.tmp.md

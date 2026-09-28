@@ -1,0 +1,321 @@
+{
+  "name": "photo-face",
+  "author": "case",
+  "version": "1.1.6",
+  "keywords": [
+    "pebble-watchface"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Photo Face",
+    "uuid": "a34a36cc-f100-4d3e-b13d-7a429bfdffd3",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "capabilities": [
+      "configurable",
+      "health",
+      "location"
+    ],
+    "messageKeys": [
+      "IMG_TOTAL",
+      "IMG_CHUNK",
+      "IMG_BUILTIN",
+      "REQUEST_NEXT",
+      "TEMP_NOW",
+      "S_ROTATE_MIN",
+      "S_SHAKE",
+      "S_CLOCK_POS",
+      "S_FONT",
+      "S_COLOR",
+      "S_BG",
+      "S_POS_DATE",
+      "S_POS_BATT",
+      "S_POS_STEPS",
+      "S_POS_TEMP",
+      "S_POS_HR",
+      "COND_NOW",
+      "S_POS_COND",
+      "S_POS_CONN",
+      "S_TIME_FMT",
+      "S_SECONDS",
+      "S_POS_SPIN",
+      "S_FONT_ALL",
+      "S_INK_COLOR",
+      "S_BAR_COLOR",
+      "OV_POS",
+      "OV_INK",
+      "OV_BG",
+      "OV_BAR",
+      "S_FONT_SIZE",
+      "IMG_ID",
+      "IMG_SHOW",
+      "CACHE_MISS",
+      "CACHE_QUERY",
+      "CACHE_LIST",
+      "CACHE_ACK",
+      "IMG_PREFETCH",
+      "SEL_IDS",
+      "CACHE_FULL",
+      "SEL_GROUPS",
+      "S_SHUFFLE",
+      "CURSOR_IDX",
+      "REQUEST_IDX",
+      "OV_SET",
+      "NEED_IMAGE",
+      "IMG_SEQ",
+      "IMG_OFFSET"
+    ],
+    "targetPlatforms": [
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "resources": {
+      "media": [
+        {
+          "type": "font",
+          "name": "FONT_PIXEL_44",
+          "file": "fonts/VT323-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_SCRIPT_32",
+          "file": "fonts/PermanentMarker-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_PIXEL_20",
+          "file": "fonts/VT323-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_SCRIPT_16",
+          "file": "fonts/PermanentMarker-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_TYPE_34",
+          "file": "fonts/SpecialElite-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_TYPE_16",
+          "file": "fonts/SpecialElite-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_NEON_30",
+          "file": "fonts/Monoton-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_POSTER_36",
+          "file": "fonts/AbrilFatface-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_POSTER_16",
+          "file": "fonts/AbrilFatface-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_STENCIL_30",
+          "file": "fonts/BlackOpsOne-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_STENCIL_14",
+          "file": "fonts/BlackOpsOne-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_LCD_28",
+          "file": "fonts/DSEG7Classic-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_PIXEL_34",
+          "file": "fonts/VT323-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_PIXEL_56",
+          "file": "fonts/VT323-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_SCRIPT_24",
+          "file": "fonts/PermanentMarker-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_SCRIPT_40",
+          "file": "fonts/PermanentMarker-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_TYPE_26",
+          "file": "fonts/SpecialElite-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_TYPE_42",
+          "file": "fonts/SpecialElite-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_NEON_22",
+          "file": "fonts/Monoton-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_NEON_38",
+          "file": "fonts/Monoton-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_POSTER_28",
+          "file": "fonts/AbrilFatface-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_POSTER_44",
+          "file": "fonts/AbrilFatface-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_STENCIL_22",
+          "file": "fonts/BlackOpsOne-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_STENCIL_38",
+          "file": "fonts/BlackOpsOne-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_LCD_22",
+          "file": "fonts/DSEG7Classic-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_LCD_36",
+          "file": "fonts/DSEG7Classic-Regular.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_PIXEL_16",
+          "file": "fonts/VT323-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_PIXEL_26",
+          "file": "fonts/VT323-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_SCRIPT_13",
+          "file": "fonts/PermanentMarker-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_SCRIPT_20",
+          "file": "fonts/PermanentMarker-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_TYPE_13",
+          "file": "fonts/SpecialElite-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_TYPE_20",
+          "file": "fonts/SpecialElite-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_POSTER_13",
+          "file": "fonts/AbrilFatface-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_POSTER_20",
+          "file": "fonts/AbrilFatface-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_STENCIL_12",
+          "file": "fonts/BlackOpsOne-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_STENCIL_18",
+          "file": "fonts/BlackOpsOne-Regular.ttf",
+          "characterRegex": "[ -~·°]"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_B_ANIMALS_1",
+          "file": "images/builtin-animals-1.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_B_SPACE_1",
+          "file": "images/builtin-space-1.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_B_ARCHITECTURE_1",
+          "file": "images/builtin-architecture-1.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_B_TRANSPORT_1",
+          "file": "images/builtin-transport-1.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_B_FLORA_1",
+          "file": "images/builtin-flora-1.png"
+        }
+      ]
+    }
+  }
+}

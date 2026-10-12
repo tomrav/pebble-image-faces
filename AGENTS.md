@@ -43,6 +43,9 @@ and phone transport. This file is the instruction set for every coding agent.
   `npm run pebble:publish-config` needs no `wrangler login`; never run `wrangler login` on devbox
   and never print `.env`. The settings pages are live for installed watches: publish only when asked.
 - Platform requests (new projects, host changes) go to the devbox project's **Q** thread.
+- **Commits:** commit and push only in this repository. Never commit or push to
+  `~/projects/devbox` or any other repository, even if a task asks for it; put anything
+  for the devbox records (manifest, host change log) in your final report and Q records it.
 
 ## Sources
 

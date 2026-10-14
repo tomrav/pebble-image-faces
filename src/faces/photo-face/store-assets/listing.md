@@ -1,6 +1,6 @@
 # Photo Face — appstore listing
 
-Released 2026-10-14: 1.3.0 (dithering against the measured panel colours; settings site published first); notes in `release-1.3.0.txt`. Previously: Released 2026-10-14: 1.2.0 (Pebble Round 2 support); notes in `release-1.2.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
+Released 2026-10-14: 1.3.0 (dithering against the measured panel colors; settings site published first); notes in `release-1.3.0.txt`. Previously: Released 2026-10-14: 1.2.0 (Pebble Round 2 support); notes in `release-1.2.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
 
 Previously released: 1.1.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.1.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups, multi-file upload on the
@@ -50,8 +50,8 @@ The settings page previews everything before you save.
 
 ## Release notes history (latest first; 1.0.2's note was reworded 2026-08-08)
 
-- 1.3.0 — Photos dithered against the colours the panel really shows (measured), sharper; library refreshes on the watch by itself; "Refresh photos" for uploads (crop saved with each new upload). See `release-1.3.0.txt`.
-- 1.2.0 — Pebble Round 2 support: round 260x260 photos in all 64 colours, round settings preview and crop, overlay kept inside the circle. See `release-1.2.0.txt`.
+- 1.3.0 — Photos dithered against the colors the panel really shows (measured), sharper; library refreshes on the watch by itself; "Refresh photos" for uploads (crop saved with each new upload). See `release-1.3.0.txt`.
+- 1.2.0 — Pebble Round 2 support: round 260x260 photos in all 64 colors, round settings preview and crop, overlay kept inside the circle. See `release-1.2.0.txt`.
 - 1.1.8 — Failed phone saves are reported on the settings page instead of silently reverting. See `release-1.1.8.txt`.
 - 1.1.7 — Settings page moved to image-faces-config.pages.dev (the repo is public); weather credit and location note. See `release-1.1.7.txt`.
 - 1.1.6 — Top clock seated under the top-row data points by measured per-style ink insets (LCD/Neon overlapped). See `release-1.1.6.txt`.

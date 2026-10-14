@@ -1,5 +1,5 @@
 Sharper, truer photos.
 
-- Photos are converted for the colours the watch screen really shows, so they look more natural and keep more detail
+- Photos are converted for the colors the watch screen really shows, so they look more natural and keep more detail
 - The example photos update on your watch by themselves
 - New "Refresh photos" button: photos you add from now on can be converted again later without redoing their crop

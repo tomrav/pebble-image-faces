@@ -1,6 +1,6 @@
 Photo Face now runs on Pebble Round 2.
 
-- Your photos fill the round screen in all 64 colours, cut for the circle
+- Your photos fill the round screen in all 64 colors, cut for the circle
 - The settings page shows a round watch preview and crops uploads to the circle
 - The clock and data points stay inside the circle
 - More reliable photo loading

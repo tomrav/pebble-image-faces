@@ -1,6 +1,6 @@
 # Photo Face — appstore listing
 
-Release prepared for 2026-10-14: 1.3.0 (dithering against the measured panel colours); notes in `release-1.3.0.txt`. Previously: Released 2026-10-14: 1.2.0 (Pebble Round 2 support); notes in `release-1.2.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
+Released 2026-10-14: 1.3.0 (dithering against the measured panel colours; settings site published first); notes in `release-1.3.0.txt`. Previously: Released 2026-10-14: 1.2.0 (Pebble Round 2 support); notes in `release-1.2.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
 
 Previously released: 1.1.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.1.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups, multi-file upload on the

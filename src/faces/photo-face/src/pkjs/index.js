@@ -271,9 +271,17 @@ function mergeUploads(resp) {
       return true;
     });
   });
+  // uploadMeta (name/size/date + crop, for the page's "Refresh photos") lives
+  // and dies with its upload.
+  var meta = cfg.uploadMeta || {};
   cfg.uploads = {};
   cfg.thumbs = {};
-  for (k in used) { cfg.uploads[k] = uploads[k]; if (thumbs[k]) { cfg.thumbs[k] = thumbs[k]; } }
+  cfg.uploadMeta = {};
+  for (k in used) {
+    cfg.uploads[k] = uploads[k];
+    if (thumbs[k]) { cfg.thumbs[k] = thumbs[k]; }
+    if (meta[k]) { cfg.uploadMeta[k] = meta[k]; }
+  }
   return dropped;
 }
 
@@ -306,11 +314,18 @@ function fnv1a32(str) {
   return h >>> 0;
 }
 
+// Generation of the hosted ('r:') images. The watch never rewrites a cached
+// image under the same id, so re-converting the hosted set must change their
+// ids: bump this and every watch fetches the new bytes once. 2 = dithered
+// against the measured panel colours (Photo Face 1.3.0 / Ghibli Time 1.5.0).
+var HOSTED_GEN = 2;
+
 function idForRef(ref) {
   if (ref.charAt(0) === 'b') {
     var idx = BUILTINS.indexOf(ref.slice(2));
     return idx < 0 ? 0 : idx + 1;
   }
+  if (ref.charAt(0) === 'r' && HOSTED_GEN > 1) { ref += '#' + HOSTED_GEN; }
   return (fnv1a32(ref) | 0x80000000) >>> 0;
 }
 
@@ -1126,6 +1141,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
     var prev = cfg;
     cfg = resp;
     cfg.uploads = prev.uploads || {}; cfg.thumbs = prev.thumbs || {};
+    // A page from before uploadMeta sends none: keep what the phone had.
+    if (!cfg.uploadMeta) { cfg.uploadMeta = prev.uploadMeta || {}; }
     var dropped = mergeUploads(incoming);
     if (dropped) { console.log('Dropped ' + dropped + ' upload ref(s) with no bytes on the phone'); }
     if (!cfg.cursor) { cfg.cursor = { g: 0, i: 0 }; }

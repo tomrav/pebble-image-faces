@@ -80,49 +80,112 @@
     return sig.concat(chunk('IHDR', ihdr), chunk('PLTE', plte), chunk('IDAT', idat), chunk('IEND', []));
   }
 
-  function snap(v) { v = v < 0 ? 0 : (v > 255 ? 255 : v); return Math.round(v / 85) * 85; } // -> Emery 4 levels
+  // Dither against what the panel SHOWS, not the nominal palette — the twin of
+  // dither() in scripts/lib/emery-image.py (keep them in step; A/B tested on a
+  // Time 2, 2026-10-14):
+  //   - DISPLAY is the colour the e-paper panel shows for each of the 64
+  //     palette entries (measured from the SDK emulators, which model the
+  //     panel). Saturated colours are far duller than nominal.
+  //   - nearest colour by OKLab distance; error measured and diffused in
+  //     linear light; serpentine Floyd–Steinberg, damped and clamped so
+  //     colours the panel can't reach don't smear.
+  //   - a light unsharp mask first: dither noise eats fine detail.
+  var LEVELS = [0, 85, 170, 255];
+  var DAMP = 0.9, CLAMP = 0.12;
+  var SHARPEN = { sigma: 1, amount: 0.7, threshold: 2 };
+  // Palette order: red-major, then green, then blue (levels 0/85/170/255).
+  var DISPLAY = [
+    '000000', '001e41', '004387', '0068ca', '2b4a2c', '27514f', '16638d', '007dce',
+    '5e9860', '5c9b72', '57a5a2', '4cb4db', '8ee391', '8ee69e', '8aebc0', '84f5f1',
+    '4a161b', '482748', '40488a', '2f6bcc', '564e36', '545454', '4f6790', '4180d0',
+    '759a64', '759d76', '71a6a4', '69b5dd', '9ee594', '9de7a0', '9becc2', '95f6f2',
+    '99353f', '983e5a', '955694', '8f74d2', '9d5b4d', '9d6064', '9a7099', '9587d5',
+    'afa072', 'aea382', 'ababab', 'a7bae2', 'c9e89d', 'c9eaa7', 'c7f0c8', 'c3f9f7',
+    'e35462', 'e25874', 'e16aa3', 'de83dc', 'e66e6b', 'e6727c', 'e37fa7', 'e194df',
+    'f1aa86', 'f1ad93', 'efb5b8', 'ecc3eb', 'ffeeab', 'fff1b5', 'fff6d3', 'ffffff',
+  ];
+  function toLin(v) { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  function oklab(r, g, b) {
+    var l = Math.cbrt(Math.max(0, 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b));
+    var m = Math.cbrt(Math.max(0, 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b));
+    var s = Math.cbrt(Math.max(0, 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b));
+    return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+  }
+  var NOMINAL = [], DISP_LIN = [], DISP_OK = [];
+  for (var di = 0; di < 64; di++) {
+    NOMINAL.push([LEVELS[di >> 4], LEVELS[(di >> 2) & 3], LEVELS[di & 3]]);
+    var hx = DISPLAY[di], lin = [toLin(parseInt(hx.slice(0, 2), 16)), toLin(parseInt(hx.slice(2, 4), 16)), toLin(parseInt(hx.slice(4, 6), 16))];
+    DISP_LIN.push(lin); DISP_OK.push(oklab(lin[0], lin[1], lin[2]));
+  }
+  // Nearest display colour per 7-bit linear colour, filled on demand.
+  var NEAREST = new Uint8Array(128 * 128 * 128).fill(255);
+  function nearest(r, g, b) {
+    var qr = Math.max(0, Math.min(127, Math.round(r * 127))), qg = Math.max(0, Math.min(127, Math.round(g * 127))),
+        qb = Math.max(0, Math.min(127, Math.round(b * 127)));
+    var key = (qr * 128 + qg) * 128 + qb, k = NEAREST[key];
+    if (k !== 255) { return k; }
+    var o = oklab(qr / 127, qg / 127, qb / 127), best = 0, bd = Infinity;
+    for (var i = 0; i < 64; i++) {
+      var p = DISP_OK[i], dl = p[0] - o[0], da = p[1] - o[1], db = p[2] - o[2], dd = dl * dl + da * da + db * db;
+      if (dd < bd) { bd = dd; best = i; }
+    }
+    NEAREST[key] = best;
+    return best;
+  }
 
-  // Quantize to Emery's 64 colors with Floyd–Steinberg error diffusion, so
-  // near-neutral tones don't become false saturated colors.
-  //
-  // Two departures from textbook FS, both aimed at PHOTOGRAPHS, and both
-  // mirroring scripts/gen-photo-face.mjs so an uploaded photo and a bundled one
-  // land on the same look:
-  //   - DAMP: textbook FS conserves all error, which is right for accuracy and
-  //     wrong for appearance at 2 bits per channel. Slightly under-diffusing
-  //     trades a little accuracy for markedly less speckle.
-  //   - DEADZONE: error below ~12/255 is dropped instead of spread. Tiny errors
-  //     are exactly what turns a near-flat sky into confetti.
-  // Plus a serpentine scan, which breaks up the diagonal "worm" artifacts a
-  // uniform left-to-right pass produces.
-  //
-  // Illustrations never showed this (their flat areas are already exact palette
-  // colors, so there is no error to spread) which is why plain FS looked fine
-  // until real photos went through it.
-  var DAMP = 0.82, DEADZONE = 12;
+  // Unsharp mask (gaussian sigma 1, separable), skipping differences at or
+  // below the threshold — Pillow's UnsharpMask(1, 70, 2) on the Python side.
+  function sharpen(src, w, h) {
+    var k = [], ks = 0, R = 3;
+    for (var t = -R; t <= R; t++) { var v = Math.exp(-t * t / (2 * SHARPEN.sigma * SHARPEN.sigma)); k.push(v); ks += v; }
+    for (var t2 = 0; t2 < k.length; t2++) { k[t2] /= ks; }
+    var tmp = new Float32Array(w * h * 3), blur = new Float32Array(w * h * 3), out = new Float32Array(w * h * 3);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        for (var c = 0; c < 3; c++) {
+          var acc = 0;
+          for (var t3 = -R; t3 <= R; t3++) { var xx = Math.max(0, Math.min(w - 1, x + t3)); acc += src[(y * w + xx) * 4 + c] * k[t3 + R]; }
+          tmp[(y * w + x) * 3 + c] = acc;
+        }
+      }
+    }
+    for (var y2 = 0; y2 < h; y2++) {
+      for (var x2 = 0; x2 < w; x2++) {
+        for (var c2 = 0; c2 < 3; c2++) {
+          var acc2 = 0;
+          for (var t4 = -R; t4 <= R; t4++) { var yy = Math.max(0, Math.min(h - 1, y2 + t4)); acc2 += tmp[(yy * w + x2) * 3 + c2] * k[t4 + R]; }
+          var o2 = src[(y2 * w + x2) * 4 + c2], diff = o2 - acc2;
+          out[(y2 * w + x2) * 3 + c2] = Math.abs(diff) > SHARPEN.threshold ? Math.max(0, Math.min(255, o2 + diff * SHARPEN.amount)) : o2;
+        }
+      }
+    }
+    return out;
+  }
 
   function quantize(ctx, w, h) {
-    var src = ctx.getImageData(0, 0, w, h).data;
+    var sharp = sharpen(ctx.getImageData(0, 0, w, h).data, w, h);
     var buf = new Float32Array(w * h * 3);
-    for (var i = 0; i < w * h; i++) { buf[i * 3] = src[i * 4]; buf[i * 3 + 1] = src[i * 4 + 1]; buf[i * 3 + 2] = src[i * 4 + 2]; }
+    for (var i = 0; i < w * h * 3; i++) { buf[i] = toLin(sharp[i]); }
     function diffuse(idx, er, eg, eb, f) { buf[idx] += er * f; buf[idx + 1] += eg * f; buf[idx + 2] += eb * f; }
-    function damp(e) { return Math.abs(e) < DEADZONE ? 0 : e * DAMP; }
+    function clampErr(e) { e *= DAMP; return e > CLAMP ? CLAMP : (e < -CLAMP ? -CLAMP : e); }
     var map = {}, palette = [], indices = new Array(w * h);
     for (var y = 0; y < h; y++) {
       var l2r = (y % 2 === 0), d = l2r ? 1 : -1;
-      for (var k = 0; k < w; k++) {
-        var x = l2r ? k : (w - 1 - k);
+      for (var q = 0; q < w; q++) {
+        var x = l2r ? q : (w - 1 - q);
         var o = (y * w + x) * 3;
-        var nr = snap(buf[o]), ng = snap(buf[o + 1]), nb = snap(buf[o + 2]);
-        var er = damp(buf[o] - nr), eg = damp(buf[o + 1] - ng), eb = damp(buf[o + 2] - nb);
+        var kk = nearest(buf[o], buf[o + 1], buf[o + 2]), dl = DISP_LIN[kk];
+        var er = clampErr(buf[o] - dl[0]), eg = clampErr(buf[o + 1] - dl[1]), eb = clampErr(buf[o + 2] - dl[2]);
         if (x + d >= 0 && x + d < w) { diffuse((y * w + (x + d)) * 3, er, eg, eb, 7 / 16); }
         if (y + 1 < h) {
           if (x - d >= 0 && x - d < w) { diffuse(((y + 1) * w + (x - d)) * 3, er, eg, eb, 3 / 16); }
           diffuse(((y + 1) * w + x) * 3, er, eg, eb, 5 / 16);
           if (x + d >= 0 && x + d < w) { diffuse(((y + 1) * w + (x + d)) * 3, er, eg, eb, 1 / 16); }
         }
-        var key = nr + ',' + ng + ',' + nb, idx = map[key];
-        if (idx === undefined) { idx = palette.length; map[key] = idx; palette.push([nr, ng, nb]); }
+        var idx = map[kk];
+        if (idx === undefined) { idx = palette.length; map[kk] = idx; palette.push(NOMINAL[kk]); }
         indices[y * w + x] = idx;
       }
     }
@@ -144,21 +207,8 @@
     return btoa(s);
   }
 
-  // Black outside the circle inscribed in the w x h canvas: the same pixel-centre
-  // test as round_mask() in emery-image.py and the watch's canvas rows.
-  function maskRound(ctx, w, h) {
-    var im = ctx.getImageData(0, 0, w, h), d = im.data, r2 = Math.min(w, h) * Math.min(w, h);
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        var dx = 2 * x + 1 - w, dy = 2 * y + 1 - h;
-        if (dx * dx + dy * dy > r2) { var o = (y * w + x) * 4; d[o] = d[o + 1] = d[o + 2] = 0; }
-      }
-    }
-    ctx.putImageData(im, 0, 0);
-  }
-
-  // The dither pushes error across the circle's edge; set those pixels back to
-  // black, as emery-image.py does.
+  // Round: paint everything outside the circle black after the dither, as
+  // emery-image.py does (the watch never shows it; flat black costs nothing).
   function scrubRound(q, w, h) {
     var black = -1, r2 = Math.min(w, h) * Math.min(w, h);
     for (var i = 0; i < q.palette.length; i++) {
@@ -222,7 +272,8 @@
       ctx = cv.getContext('2d');
       ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, w, h);
     }
-    if (ROUND) { maskRound(ctx, w, h); }
+    // Round: the outside goes black after the dither (scrubRound), so the
+    // sharpening sees the image run on past the edge, as emery-image.py does.
     var q = quantize(ctx, w, h);
     if (ROUND) { scrubRound(q, w, h); }
     var png = new Uint8Array(await buildPNG(w, h, q.indices, q.palette));

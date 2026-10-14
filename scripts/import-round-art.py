@@ -1,5 +1,9 @@
-# Cuts the franchise image packs for Pebble Round 2 (gabbro): 260x260, black
-# outside the circle, dithered by the shared converter (scripts/lib/emery-image.py).
+# Cuts the franchise image packs from their originals, for both watches:
+#   - Pebble Round 2 (gabbro): 260x260, black outside the circle
+#     -> media/epaper-round/<pack>/<slug>.png
+#   - Pebble Time 2 (emery): 200x228, the same framing as the existing cut
+#     -> media/epaper/<pack>/<slug>.png (replaced in place)
+# Both are dithered by the shared converter (scripts/lib/emery-image.py).
 #
 #   npm run pebble:import-round-art            every pack in media/sources.csv
 #   npm run pebble:import-round-art -- ghibli  just the packs starting "ghibli"
@@ -14,8 +18,10 @@
 #      (one free axis), then, if that fits badly, zoomed in (FFT search over
 #      scale and position)
 #   3. take the square around that centre (the largest one for a cover crop;
-#      as tall as the old cut for a zoomed one) and convert it, writing
-#      media/epaper-round/<pack>/<slug>.png for scripts/gen-franchise-faces.mjs
+#      as tall as the old cut for a zoomed one) for Round 2, and the same
+#      window as the existing cut for Time 2, and convert both
+# A Time 2 cut is only recut when its framing was found in the original; one
+# that came from a different image (manual focus, poor match) keeps its cut.
 # Prints one line per image with the match error; a high one means no framing
 # fitted and the square fell back to the centre — check those by eye.
 import csv, json, os, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
@@ -171,6 +177,21 @@ def main():
             centre, side, note = (orig.size[0] * fx, orig.size[1] * fy), None, ' (manual focus)'
         elif err > POOR_MATCH:
             centre, side, note = (orig.size[0] / 2, orig.size[1] / 2), None, ' (poor match: centred)'
+        if (pack, slug) not in FOCUS and err <= POOR_MATCH:
+            # Time 2: the existing cut's window, recut from the original.
+            w, h = orig.size
+            if side:
+                bh, bw = side, side * RECT[0] / RECT[1]
+            else:
+                sc = max(RECT[0] / w, RECT[1] / h)
+                bw, bh = RECT[0] / sc, RECT[1] / sc
+            x0 = min(max(centre[0] - bw / 2, 0), w - bw)
+            y0 = min(max(centre[1] - bh / 2, 0), h - bh)
+            rect_src = os.path.join(folder, 'rect.png')
+            orig.crop((round(x0), round(y0), round(x0 + bw), round(y0 + bh))).save(rect_src)
+            jobs.append({'src': rect_src, 'png': cut_path})
+        else:
+            note += ' (Time 2 cut kept)'
         sq = square_around(orig, centre, side)
         src = os.path.join(folder, 'square.png')
         sq.save(src)

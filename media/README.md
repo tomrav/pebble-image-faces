@@ -15,7 +15,12 @@ Pack naming, per franchise id in `src/shared/franchise-face/franchises.json`:
 
 Set `PEBBLE_MEDIA=/path/to/epaper` to generate from packs kept elsewhere.
 
-## Round 2 cuts
+## Round 2 cuts (and Time 2 recuts)
+
+Since 2026-10-14 the same importer also recuts `epaper/<pack>/` for Time 2
+from the originals, at each existing cut's framing, with the current
+converter. Porco Rosso (character) and The Cat Returns keep their old Time 2
+cuts: their originals are not known (see below).
 
 `epaper-round/<pack>/` holds the same images for Pebble Round 2: 260×260,
 black outside the circle, dithered to the same palette. The 200×228 cuts are

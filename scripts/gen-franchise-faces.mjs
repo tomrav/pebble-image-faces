@@ -162,7 +162,7 @@ for (const face of faces) {
   const pkg = {
     name: face.project,
     author: 'case',
-    version: '1.4.0',  // Pebble Round 2 support
+    version: '1.5.0',  // dithered against the measured panel colours
     keywords: ['pebble-watchface'],
     private: true,
     dependencies: {},

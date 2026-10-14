@@ -1,0 +1,4 @@
+Truer colours for every image.
+
+- All the artwork is converted again from the originals for the colours the watch screen really shows
+- Your watch picks up the new versions by itself

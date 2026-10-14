@@ -151,3 +151,21 @@ test('franchise: a bundled image that left the bundle streams from the same plac
   same(p.s.cfg.sel,['b:review-builtin','r:char/gone','r:char/x']);
   same(p.s.cfg.overrides,{'r:char/gone':{pos:1}});
 });
+test('photo-face: upload crop records ride with their upload, survive an older page, and are pruned with it',()=>{
+  const {p,save}=photoFaceWith({...base,uploadMeta:{a:{n:'a.jpg',s:1,t:2,w:800,h:600,c:1,r:null}}});
+  const metaB={n:'b.jpg',s:3,t:4,w:900,h:1200,c:1,r:[10,20,300,342]};
+  save({v:2,galleries:[{id:'g',name:'G',enabled:true,end:'loop',items:['u:a','u:b']}],uploads:{b:'iVBORb'},thumbs:{b:'/9j/b'},
+        uploadMeta:{a:{n:'a.jpg',s:1,t:2,w:800,h:600,c:1,r:null},b:metaB,ghost:{n:'x'}},cursor:{g:0,i:0}});
+  same(Object.keys(p.s.cfg.uploadMeta).sort(),['a','b']);same(p.s.cfg.uploadMeta.b,metaB);
+  // A cached page from before the records existed sends none: the phone keeps its own.
+  save({v:2,galleries:[{id:'g',name:'G',enabled:true,end:'loop',items:['u:b']}],uploads:{},thumbs:{},cursor:{g:0,i:0}});
+  same(Object.keys(p.s.cfg.uploadMeta),['b']);
+});
+for (const file of ['src/faces/photo-face/src/pkjs/index.js','src/shared/franchise-face/pkjs.tmpl.js']) {
+  test(file+': re-converted hosted images get new watch ids; uploads keep theirs',()=>{
+    const p=phone(file);
+    p.run("var idsR=[idForRef('r:x'),(fnv1a32('r:x')|0x80000000)>>>0,idForRef('u:x'),(fnv1a32('u:x')|0x80000000)>>>0];");
+    const [r,rOld,u,uOld]=p.s.idsR;
+    assert.notEqual(r,rOld);assert.equal(u,uOld);assert.ok(r>=0x80000000);
+  });
+}

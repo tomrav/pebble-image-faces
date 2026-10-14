@@ -200,11 +200,18 @@ function fnv1a32(str) {
   return h >>> 0;
 }
 
+// Generation of the hosted ('r:') images. The watch never rewrites a cached
+// image under the same id, so re-converting the hosted set must change their
+// ids: bump this and every watch fetches the new bytes once. 2 = dithered
+// against the measured panel colours (Photo Face 1.3.0 / Ghibli Time 1.5.0).
+var HOSTED_GEN = 2;
+
 function idForRef(ref) {
   if (ref.charAt(0) === 'b') {
     var idx = BUILTINS.indexOf(ref.slice(2));
     return idx < 0 ? 0 : idx + 1;
   }
+  if (ref.charAt(0) === 'r' && HOSTED_GEN > 1) { ref += '#' + HOSTED_GEN; }
   return (fnv1a32(ref) | 0x80000000) >>> 0;
 }
 

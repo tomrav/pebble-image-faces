@@ -24,13 +24,19 @@
 # Quantizing to an adaptive palette makes the watch remap a second time with no
 # dithering — that double quantization shifts colors and bands gradients.
 #
-# Sources already on the fixed palette (the pre-dithered epaper packs) pass
-# through untouched. Everything else — photographs — gets a damped serpentine
-# Floyd-Steinberg against the real palette:
-#   - serpentine scan: breaks up directional "worm" artifacts
-#   - damping (0.82): full error conservation is accurate but speckly at 2 bits
-#   - deadzone (12/255): tiny errors are what turn a near-flat sky into confetti
-# Pushed further (0.7 / 18) gradients band; these are the conservative end.
+# Sources already on the fixed palette (pre-dithered packs) pass through
+# untouched. Everything else is dithered against what the panel SHOWS, not the
+# nominal palette (2026-10-14, A/B tested on a Time 2):
+#   - DISPLAY holds the colour the e-paper panel actually shows for each of the
+#     64 palette entries, measured from the SDK emulators (which model the real
+#     panel; emery and gabbro agree). Saturated colours come out far duller
+#     than nominal, so dithering against nominal colours aimed every mix at the
+#     wrong target: pinkish lions, grey skies, flat skin.
+#   - the nearest colour is chosen in OKLab (perceptual); the error is measured
+#     and diffused in LINEAR light, where mixing pixels averages physically.
+#   - serpentine Floyd-Steinberg, damped (0.9) and with each error component
+#     clamped (0.12), so colours the panel cannot reach don't smear.
+#   - a light unsharp mask after the downscale: dither noise eats fine detail.
 # Downscaling happens in LINEAR light — averaging gamma-encoded pixels darkens
 # edges before the dither ever sees them.
 #
@@ -51,14 +57,27 @@
 # settings-page previews (png, thumb) stay ordinary PNGs.
 import sys, json, base64, io
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 
 SHAPES = {'rect': (200, 228), 'round': (260, 260)}
 STRIP_ROWS = 26
 STREAM_CAP = 32768
-DAMP = 0.82
-DEADZONE = 12.0
 LEVELS = (0, 85, 170, 255)
+DAMP = 0.9
+CLAMP = 0.12
+SHARPEN = dict(radius=1.0, percent=70, threshold=2)
+# What the panel shows for each palette entry, in palette order (red-major,
+# then green, then blue; levels 0/85/170/255). Twin: DISPLAY in pebble-image.js.
+DISPLAY = [
+    '000000', '001e41', '004387', '0068ca', '2b4a2c', '27514f', '16638d', '007dce',
+    '5e9860', '5c9b72', '57a5a2', '4cb4db', '8ee391', '8ee69e', '8aebc0', '84f5f1',
+    '4a161b', '482748', '40488a', '2f6bcc', '564e36', '545454', '4f6790', '4180d0',
+    '759a64', '759d76', '71a6a4', '69b5dd', '9ee594', '9de7a0', '9becc2', '95f6f2',
+    '99353f', '983e5a', '955694', '8f74d2', '9d5b4d', '9d6064', '9a7099', '9587d5',
+    'afa072', 'aea382', 'ababab', 'a7bae2', 'c9e89d', 'c9eaa7', 'c7f0c8', 'c3f9f7',
+    'e35462', 'e25874', 'e16aa3', 'de83dc', 'e66e6b', 'e6727c', 'e37fa7', 'e194df',
+    'f1aa86', 'f1ad93', 'efb5b8', 'ecc3eb', 'ffeeab', 'fff1b5', 'fff6d3', 'ffffff',
+]
 
 
 def srgb_to_lin(a):
@@ -109,20 +128,50 @@ def on_palette(arr):
     return bool(np.isin(arr, LEVELS).all())
 
 
+NOMINAL = np.array([(r, g, b) for r in LEVELS for g in LEVELS for b in LEVELS], np.float32)
+
+
+def oklab(lin):
+    """Linear sRGB (..., 3) -> OKLab."""
+    m1 = np.array([[0.4122214708, 0.5363325363, 0.0514459929],
+                   [0.2119034982, 0.6806995451, 0.1073969566],
+                   [0.0883024619, 0.2817188376, 0.6299787005]])
+    m2 = np.array([[0.2104542553, 0.7936177850, -0.0040720468],
+                   [1.9779984951, -2.4285922050, 0.4505937099],
+                   [0.0259040371, 0.7827717662, -0.8086757660]])
+    return np.cbrt(np.clip(lin @ m1.T, 0, None)) @ m2.T
+
+
+DISPLAY_LIN = srgb_to_lin(np.array([[int(h[i:i + 2], 16) for i in (0, 2, 4)] for h in DISPLAY], np.float32))
+DISPLAY_OK = oklab(DISPLAY_LIN)
+# Nearest display colour for every 7-bit-per-channel linear colour, filled on
+# demand (a full table is 2M entries; an image touches a few thousand).
+_NEAREST = np.full(128 ** 3, 255, np.uint8)
+
+
+def nearest(lin):
+    q = np.clip(np.round(lin * 127), 0, 127).astype(np.int32)
+    key = (q[0] * 128 + q[1]) * 128 + q[2]
+    k = _NEAREST[key]
+    if k == 255:
+        k = _NEAREST[key] = int(np.argmin(((DISPLAY_OK - oklab(q / 127.0)) ** 2).sum(1)))
+    return k
+
+
 def dither(rgb):
-    h, w, _ = rgb.shape
-    buf = rgb.astype(np.float32).copy()
+    """sRGB float image -> nominal palette image, dithered against DISPLAY."""
+    im = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8)).filter(ImageFilter.UnsharpMask(**SHARPEN))
+    buf = srgb_to_lin(np.asarray(im, np.float32))
+    h, w, _ = buf.shape
     out = np.empty((h, w, 3), dtype=np.uint8)
     for y in range(h):
         l2r = (y % 2 == 0)
         xs = range(w) if l2r else range(w - 1, -1, -1)
         d = 1 if l2r else -1
         for x in xs:
-            old = buf[y, x]
-            new = np.round(np.clip(old, 0, 255) / 85.0) * 85.0
-            err = old - new
-            err = np.where(np.abs(err) < DEADZONE, 0.0, err) * DAMP
-            out[y, x] = new
+            k = nearest(buf[y, x])
+            err = np.clip((buf[y, x] - DISPLAY_LIN[k]) * DAMP, -CLAMP, CLAMP)
+            out[y, x] = NOMINAL[k]
             if 0 <= x + d < w:
                 buf[y, x + d] += err * 0.4375
             if y + 1 < h:
@@ -169,16 +218,16 @@ for j in jobs:
         focus = j.get('focus') or (0.5, 0.5)
         im = cover_crop(im, (float(focus[0]), float(focus[1])), target)
         arr = resize_linear(im, target)
+    # Round: the outside of the circle is painted black AFTER the dither, so
+    # the sharpening sees the image run on past the edge (masking first would
+    # put a bright halo just inside the circle).
     outside = round_mask(target) if shape == 'round' else None
-    if outside is not None:
-        arr = arr.copy()
-        arr[outside] = 0
     if not on_palette(arr):
         arr = dither(arr)
     else:
         arr = arr.astype(np.uint8)
     if outside is not None:
-        # The dither pushes error across the edge; scrub it back to black.
+        arr = arr.copy()
         arr[outside] = 0
 
     data = encode(arr)

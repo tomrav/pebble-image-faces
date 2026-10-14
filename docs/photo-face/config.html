@@ -498,6 +498,7 @@
       <div id="galleries"></div>
 
       <button id="addgal" class="outline">＋ Add gallery</button>
+      <button id="refreshphotos" class="outline" title="Pick photos you added before to convert them again with their saved crop">↻ Refresh photos</button>
     </section>
 
     <!-- Sticky save bar: hidden until the config differs from what PKJS sent,
@@ -518,7 +519,7 @@
     </div>
   </main>
 
-  <script src="../shared/pebble-image.js?v=20261013a"></script>
+  <script src="../shared/pebble-image.js?v=20261014b"></script>
   <script src="../shared/face-crop.js?v=20261013a"></script>
   <script src="../shared/face-config.js?v=20261014a"></script>
   <script>
@@ -598,6 +599,7 @@
       cfg = raw ? JSON.parse(raw) : defaultCfg();
       if (!cfg.galleries || !cfg.galleries.length) { cfg = defaultCfg(); }
       if (!cfg.uploads) { cfg.uploads = {}; }
+      if (!cfg.uploadMeta) { cfg.uploadMeta = {}; }
       if (!cfg.auto) { cfg.auto = { on: false, sec: 300 }; }
     } catch (e) { cfg = defaultCfg(); }
     PebbleImage.noticeSaveFailed(cfg, 'If it keeps happening, remove some uploaded photos.');
@@ -743,7 +745,7 @@
       if (ref.charAt(0) === 'u') {
         var id = ref.slice(2), used = false;
         cfg.galleries.forEach(function (g) { if (g.items.indexOf('u:' + id) >= 0) { used = true; } });
-        if (!used) { delete cfg.uploads[id]; delete thumbs[id]; delete newThumbs[id]; }
+        if (!used) { delete cfg.uploads[id]; delete thumbs[id]; delete newThumbs[id]; delete cfg.uploadMeta[id]; }
       }
       render();
     }
@@ -790,10 +792,11 @@
         statusEl.textContent = msg;
       }
       // Put the converted photo into the gallery, within budget.
-      function accept(src, crop, rect, r) {
+      function accept(src, crop, rect, r, file) {
         var id = String(Date.now()) + Math.floor(Math.random() * 1000);
         var items = cfg.galleries[gi].items, oldRef = null;
         cfg.uploads[id] = r.b64;
+        cfg.uploadMeta[id] = uploadMeta(file, src, crop, rect);
         thumbs[id] = makeThumb(src, crop, rect);
         if (INCREMENTAL) { newThumbs[id] = thumbs[id]; }
         if (replacing !== null && replacing < items.length) { oldRef = items[replacing]; items[replacing] = 'u:' + id; }
@@ -801,13 +804,13 @@
         if (encodedCfgSize() > PebbleImage.MAX_CONFIG_URL_CHARS) {
           // Over budget with this one in: take it back out and stop here.
           if (oldRef !== null) { items[replacing] = oldRef; } else { items.pop(); }
-          delete cfg.uploads[id]; delete thumbs[id]; delete newThumbs[id];
+          forgetUpload(id);
           return false;
         }
         if (oldRef !== null && oldRef.charAt(0) === 'u') {
           var oid = oldRef.slice(2), used = false;
           cfg.galleries.forEach(function (g) { if (g.items.indexOf(oldRef) >= 0) { used = true; } });
-          if (!used) { delete cfg.uploads[oid]; delete thumbs[oid]; delete newThumbs[oid]; }
+          if (!used) { forgetUpload(oid); }
         }
         added++;
         setPreview(dataUrl(r.preview), 'Upload (' + r.bytes + ' bytes)');
@@ -817,11 +820,12 @@
       // conversion is done. A working canvas that has been displayed and pulled
       // out of the DOM can, rarely, read back blank (one flat colour); when the
       // conversion comes back that way it is redone once from the original.
-      function convert(src, crop, rect, name, i, orig, url, retried) {
+      function convert(src, crop, rect, file, i, orig, url, retried) {
+        var name = file.name;
         statusEl.textContent = 'Converting ' + (name || 'photo') + '…';
         PebbleImage.processImage(src, { crop: crop, rect: rect }).then(function (r) {
           if (r.colors <= 1 && orig && !retried) {
-            convert(workingCopy(orig), crop, rect, name, i, orig, url, true); return;
+            convert(workingCopy(orig), crop, rect, file, i, orig, url, true); return;
           }
           URL.revokeObjectURL(url);
           if (r.bytes > PebbleImage.MAX_IMAGE_BYTES) {
@@ -830,7 +834,7 @@
               Math.round(PebbleImage.MAX_IMAGE_BYTES / 1024) + 'kb)');
             next(i + 1); return;
           }
-          if (!accept(src, crop, rect, r)) { stop = 'budget'; left = list.length - i; done(); return; }
+          if (!accept(src, crop, rect, r, file)) { stop = 'budget'; left = list.length - i; done(); return; }
           next(i + 1);
         }, function () { URL.revokeObjectURL(url); failed.push((name || 'image') + ' could not be converted'); next(i + 1); });
       }
@@ -852,14 +856,88 @@
             if (res.action === 'cancel') { URL.revokeObjectURL(url); stop = 'cancel'; left = list.length - i; done(); return; }
             if (res.action === 'skip') { URL.revokeObjectURL(url); next(i + 1); return; }
             if (res.action === 'all') { autoAll = true; res = { action: 'asis' }; }
-            if (res.action === 'asis') { convert(src, true, null, file.name, i, img, url); }
-            else { convert(src, !res.fit, res.rect, file.name, i, img, url); }
+            if (res.action === 'asis') { convert(src, true, null, file, i, img, url); }
+            else { convert(src, !res.fit, res.rect, file, i, img, url); }
           });
         };
         img.onerror = function () { URL.revokeObjectURL(url); failed.push((file.name || 'image') + ' could not be loaded'); next(i + 1); };
         img.src = url;
       }
       next(0);
+    }
+
+    // Per-upload record of where a photo came from and how it was cropped, so
+    // a later converter can redo it (refreshPhoto) without the crop step. A web
+    // page never sees file paths, so the file is recognised by name, size and
+    // modified date; the crop rect is in working-copy pixels (w x h).
+    function uploadMeta(file, src, crop, rect) {
+      return { n: file.name || '', s: file.size || 0, t: file.lastModified || 0,
+               w: src.width, h: src.height, c: crop ? 1 : 0,
+               r: rect ? [Math.round(rect.x), Math.round(rect.y), Math.round(rect.w), Math.round(rect.h)] : null };
+    }
+    function forgetUpload(id) {
+      delete cfg.uploads[id]; delete thumbs[id]; delete newThumbs[id]; delete cfg.uploadMeta[id];
+    }
+
+    // "Refresh a photo": pick an original again; if it matches an upload saved
+    // with its crop, convert it afresh with the current converter and put it in
+    // place everywhere it is used, keeping its per-photo look. New id, so the
+    // watch fetches the new bytes instead of keeping its cached copy.
+    function refreshPhoto(file, done) {
+      var oldId = null;
+      Object.keys(cfg.uploadMeta).forEach(function (id) {
+        var m = cfg.uploadMeta[id];
+        if (m && m.n === file.name && m.s === file.size && m.t === file.lastModified) { oldId = id; }
+      });
+      if (!oldId) {
+        statusEl.textContent = (file.name || 'That photo') + ' is not one of your saved uploads ' +
+          '(photos added before this version have no saved crop; add them again once).';
+        done(); return;
+      }
+      var m = cfg.uploadMeta[oldId], url = URL.createObjectURL(file), img = new Image();
+      statusEl.textContent = 'Refreshing ' + (file.name || 'photo') + '…';
+      img.onload = function () {
+        var src = workingCopy(img);
+        var fx = src.width / m.w, fy = src.height / m.h;
+        var rect = m.r ? { x: m.r[0] * fx, y: m.r[1] * fy, w: m.r[2] * fx, h: m.r[3] * fy } : null;
+        PebbleImage.processImage(src, { crop: !!m.c, rect: rect }).then(function (r) {
+          URL.revokeObjectURL(url);
+          if (r.bytes > PebbleImage.MAX_IMAGE_BYTES) { statusEl.textContent = 'Too detailed after conversion; kept the old copy.'; done(); return; }
+          var id = String(Date.now()) + Math.floor(Math.random() * 1000), oldRef = 'u:' + oldId, ref = 'u:' + id;
+          cfg.uploads[id] = r.b64;
+          thumbs[id] = makeThumb(src, !!m.c, rect);
+          if (INCREMENTAL) { newThumbs[id] = thumbs[id]; }
+          cfg.uploadMeta[id] = uploadMeta(file, src, !!m.c, rect);
+          cfg.galleries.forEach(function (g) { g.items = g.items.map(function (x) { return x === oldRef ? ref : x; }); });
+          if (encodedCfgSize() > PebbleImage.MAX_CONFIG_URL_CHARS) {
+            cfg.galleries.forEach(function (g) { g.items = g.items.map(function (x) { return x === ref ? oldRef : x; }); });
+            forgetUpload(id);
+            statusEl.textContent = 'Save first, then refresh this photo.';
+            done(); return;
+          }
+          if (cfg.overrides && cfg.overrides[oldRef]) { cfg.overrides[ref] = cfg.overrides[oldRef]; delete cfg.overrides[oldRef]; }
+          forgetUpload(oldId);
+          render();
+          setPreview(dataUrl(r.preview));
+          statusEl.textContent = 'Refreshed ' + (file.name || 'photo') + '. Save to send it to the watch.';
+          done();
+        }, function () { URL.revokeObjectURL(url); statusEl.textContent = 'Could not convert ' + (file.name || 'that photo') + '.'; done(); });
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); statusEl.textContent = 'Could not load ' + (file.name || 'that photo') + '.'; done(); };
+      img.src = url;
+    }
+    function pickRefresh() {
+      var input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*'; input.multiple = true;
+      input.style.position = 'fixed'; input.style.left = '-9999px';
+      input.addEventListener('change', function () {
+        var files = Array.prototype.slice.call(input.files || []);
+        input.remove();
+        // One at a time: each conversion holds a full-size bitmap.
+        (function step(i) { if (i < files.length) { refreshPhoto(files[i], function () { step(i + 1); }); } })(0);
+      });
+      document.body.appendChild(input);
+      input.click();
     }
 
     // Re-crop = pick the photo again (single file) into the same gallery slot.
@@ -1065,6 +1143,7 @@
     bindSelect('bg', 'bg');
     bindSelect('tempunit', 'tempUnit');
     document.getElementById('unitrow').style.display = ui.has('temp') ? '' : 'none';
+    document.getElementById('refreshphotos').addEventListener('click', pickRefresh);
     document.getElementById('addgal').addEventListener('click', function () {
       cfg.galleries.push({ id: 'g' + Date.now(), name: 'New gallery', enabled: true, end: 'loop', items: [] });
       expanded = cfg.galleries.length - 1; render();

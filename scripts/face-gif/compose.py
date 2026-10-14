@@ -1,6 +1,10 @@
 # Re-render emulator captures over the full-colour originals.
 #
-#   python3 scripts/face-gif/compose.py <face> <frames-dir> <configs.json> <out-dir> [--scale 2]
+#   python3 scripts/face-gif/compose.py <face> <frames-dir> <configs.json> <out-dir> [--scale 2] [--platform gabbro]
+#
+# --platform gabbro composes Pebble Round 2 captures (EMU=gabbro capture.sh):
+# 260x260, against the round cuts, over the same square the round cut was
+# taken from, black outside the circle.
 #
 # The watch shows a 64-colour dithered image; for web/app marketing we want
 # the real photo with the real watch overlay. For each frame this learns the
@@ -10,21 +14,30 @@
 # upscaled — over the original, cover-cropped like the watch does.
 import argparse, json, os, sys
 from collections import Counter, defaultdict
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ap = argparse.ArgumentParser()
 ap.add_argument('face', choices=['ghibli-face', 'photo-face'])
 ap.add_argument('frames'); ap.add_argument('configs'); ap.add_argument('out')
 ap.add_argument('--scale', type=int, default=2)
+ap.add_argument('--platform', choices=['emery', 'gabbro'], default='emery')
 a = ap.parse_args()
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-W, H = 200, 228
+ROUND = a.platform == 'gabbro'
+W, H = (260, 260) if ROUND else (200, 228)
 
 def key_of(cfg):
     return cfg['sel'][0] if 'sel' in cfg else cfg['galleries'][0]['items'][0]
 
 def sources(key):
     kind, name = key.split(':', 1)
+    if a.face == 'ghibli-face' and ROUND:
+        group, slug = name.split('/', 1)
+        pack = {'char': 'ghibli', 'media': 'ghibli_media', 'art': 'ghibli_artwork'}[group]
+        ref = f'{ROOT}/media/epaper-round/{pack}/{slug}.png'
+        # The square scripts/import-round-art.py cut the round image from.
+        sq = f'{ROOT}/media/.originals/{pack}/{slug}/square.png'
+        return (sq if os.path.exists(sq) else ref), ref
     if a.face == 'ghibli-face':
         slug = name.split('/', 1)[1]
         orig = [p for p in (f'{ROOT}/media/originals/ghibli/{slug}.{e}' for e in ('jpg', 'png', 'jpeg', 'webp')) if os.path.exists(p)]
@@ -33,7 +46,7 @@ def sources(key):
         if not orig: orig = [ref]  # full-colour originals are not in this repo; fall back to the palettized image
     else:
         orig = [p for p in (f'{ROOT}/docs/photo-face/img/{name}.{e}' for e in ('jpg', 'png', 'jpeg')) if os.path.exists(p)]
-        ref = f'{ROOT}/docs/photo-face/processed/{name}.png'
+        ref = f'{ROOT}/docs/photo-face/processed/{"round/" if ROUND else ""}{name}.png'
     if not orig: sys.exit(f'no original for {key}')
     return orig[0], ref
 
@@ -83,5 +96,9 @@ for i, shot, cfg in frames:
     base = cover(Image.open(orig_p).convert('RGB'), (W * a.scale, H * a.scale))
     ov = ov.resize((W * a.scale, H * a.scale), Image.NEAREST)
     base.paste(ov, (0, 0), ov)
+    if ROUND:
+        mask = Image.new('L', base.size, 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, base.size[0] - 1, base.size[1] - 1), fill=255)
+        base = Image.composite(base, Image.new('RGB', base.size, (0, 0, 0)), mask)
     base.save(f'{a.out}/f{i}.png')
     print(f'f{i}: {key_of(cfg)} overlay {n}px from {os.path.relpath(orig_p, ROOT)}')

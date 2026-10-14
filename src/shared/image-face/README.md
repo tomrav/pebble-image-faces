@@ -6,6 +6,9 @@ message keys without changing Photo Face's numeric wire ABI.
 
 - `face-state.h`: settings and UI state declarations.
 - `face-transfer.h`: incoming transfer ownership and timeout.
+- `face-image.h`: putting an image on screen. On Round 2 (`PBL_ROUND`) it decodes
+  strip packs into a 6-bit canvas of the circle's pixels and draws it straight
+  into the frame buffer, so a 260x260 image costs ~39.8KB instead of 67.6KB.
 - `face-cache.h`: persistent image slots, allocation journal, background recovery.
 - `face-playback.h`: selection, request/fallback state, overrides, persistence.
 - `face-overlay.h`: text, glyphs, and layout.

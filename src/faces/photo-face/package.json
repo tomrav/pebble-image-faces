@@ -1,7 +1,7 @@
 {
   "name": "photo-face",
   "author": "case",
-  "version": "1.1.8",
+  "version": "1.2.0",
   "keywords": [
     "pebble-watchface"
   ],
@@ -67,7 +67,8 @@
       "IMG_OFFSET"
     ],
     "targetPlatforms": [
-      "emery"
+      "emery",
+      "gabbro"
     ],
     "watchapp": {
       "watchface": true
@@ -293,27 +294,82 @@
         {
           "type": "png",
           "name": "IMAGE_B_ANIMALS_1",
-          "file": "images/builtin-animals-1.png"
+          "file": "images/builtin-animals-1.png",
+          "targetPlatforms": [
+            "emery"
+          ]
+        },
+        {
+          "type": "raw",
+          "name": "IMAGE_B_ANIMALS_1",
+          "file": "images/builtin-animals-1-round.pack",
+          "targetPlatforms": [
+            "gabbro"
+          ]
         },
         {
           "type": "png",
           "name": "IMAGE_B_SPACE_1",
-          "file": "images/builtin-space-1.png"
+          "file": "images/builtin-space-1.png",
+          "targetPlatforms": [
+            "emery"
+          ]
+        },
+        {
+          "type": "raw",
+          "name": "IMAGE_B_SPACE_1",
+          "file": "images/builtin-space-1-round.pack",
+          "targetPlatforms": [
+            "gabbro"
+          ]
         },
         {
           "type": "png",
           "name": "IMAGE_B_ARCHITECTURE_1",
-          "file": "images/builtin-architecture-1.png"
+          "file": "images/builtin-architecture-1.png",
+          "targetPlatforms": [
+            "emery"
+          ]
+        },
+        {
+          "type": "raw",
+          "name": "IMAGE_B_ARCHITECTURE_1",
+          "file": "images/builtin-architecture-1-round.pack",
+          "targetPlatforms": [
+            "gabbro"
+          ]
         },
         {
           "type": "png",
           "name": "IMAGE_B_TRANSPORT_1",
-          "file": "images/builtin-transport-1.png"
+          "file": "images/builtin-transport-1.png",
+          "targetPlatforms": [
+            "emery"
+          ]
+        },
+        {
+          "type": "raw",
+          "name": "IMAGE_B_TRANSPORT_1",
+          "file": "images/builtin-transport-1-round.pack",
+          "targetPlatforms": [
+            "gabbro"
+          ]
         },
         {
           "type": "png",
           "name": "IMAGE_B_FLORA_1",
-          "file": "images/builtin-flora-1.png"
+          "file": "images/builtin-flora-1.png",
+          "targetPlatforms": [
+            "emery"
+          ]
+        },
+        {
+          "type": "raw",
+          "name": "IMAGE_B_FLORA_1",
+          "file": "images/builtin-flora-1-round.pack",
+          "targetPlatforms": [
+            "gabbro"
+          ]
         }
       ]
     }

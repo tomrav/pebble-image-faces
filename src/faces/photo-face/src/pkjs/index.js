@@ -58,6 +58,19 @@ var BASE = 'https://image-faces-config.pages.dev/photo-face/';
 // 'config', and the phone webview shouldn't have to follow that to open settings.
 var CONFIG_URL = BASE + 'config';
 
+// Pebble Round 2 (gabbro) gets its own 260x260 round cut of every hosted image,
+// under processed/round/. Watch info can be missing before the first connect;
+// anything but gabbro takes the original 200x228 set.
+function watchPlatform() {
+  try {
+    var info = Pebble.getActiveWatchInfo && Pebble.getActiveWatchInfo();
+    return (info && info.platform) || 'emery';
+  } catch (e) { return 'emery'; }
+}
+function processedBase() {
+  return BASE + (watchPlatform() === 'gabbro' ? 'processed/round/' : 'processed/');
+}
+
 // Built-in photos available to galleries. The order IS the wire protocol: the
 // watch's s_builtin_resources[] table is generated in the same order, and
 // IMG_BUILTIN carries an index into it.
@@ -104,6 +117,13 @@ function b64ToBytes(b64) {
     if (bits >= 8) { bits -= 8; bytes.push((buf >> bits) & 0xFF); }
   }
   return bytes;
+}
+
+// Pages answers a missing file with 200 and its HTML fallback, so a 200 is no
+// proof of an image (a round set not yet published, say). Only PNG bytes go to
+// the watch, which would otherwise cache the page and fail to decode it.
+function isPng(bytes) {
+  return bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
 }
 
 // --- Config (persisted) --------------------------------------------------
@@ -554,13 +574,14 @@ function streamRef(ref, gen, ovm, id) {
     return;
   }
   if (imgCache[key]) { sendTransfer(imgCache[key], gen, ovm, id, null); return; }
-  var url = BASE + 'processed/' + key + '.b64';
+  var url = processedBase() + key + '.b64';
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url, true);
   xhr.timeout = 12000;
   xhr.onload = function () {
     if (xhr.status !== 200) { console.log('Fetch ' + url + ' -> ' + xhr.status); displayIdle(gen); return; }
     var bytes = b64ToBytes(xhr.responseText);
+    if (!isPng(bytes)) { console.log('Fetch ' + url + ' is not a PNG'); displayIdle(gen); return; }
     imgCache[key] = bytes;
     if (gen !== xferGen) { console.log('Fetch finished but superseded'); return; }
     console.log('Streaming ' + key + ' (' + bytes.length + ' bytes)');
@@ -696,7 +717,7 @@ function pfRun() {
     sendTransfer(imgCache[key], 0, ovMsg(ref), item.id, pf);
     return;
   }
-  var url = BASE + 'processed/' + key + '.b64';
+  var url = processedBase() + key + '.b64';
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url, true);
   xhr.timeout = 12000;
@@ -704,6 +725,7 @@ function pfRun() {
     if (pfInflight !== item || item.gen !== pfGen) { return; }
     if (xhr.status !== 200) { console.log('Prefetch fetch ' + url + ' -> ' + xhr.status); pfFinish('fetch failed'); return; }
     var bytes = b64ToBytes(xhr.responseText);
+    if (!isPng(bytes)) { console.log('Prefetch fetch ' + url + ' is not a PNG'); pfFinish('not a PNG'); return; }
     imgCache[key] = bytes;
     // A display request landed while this was fetching. The bytes are kept, but
     // the IMG_TOTAL waits: it would reset the watch's receive buffer.
@@ -1072,7 +1094,7 @@ Pebble.addEventListener('showConfiguration', function () {
     if (cfg.uploads.hasOwnProperty(id)) { forPage.thumbs[id] = (cfg.thumbs || {})[id] || cfg.uploads[id]; }
   }
   // Cache-bust the HTML so the webview never opens a stale settings page.
-  Pebble.openURL(CONFIG_URL + '?cb=' + Date.now() + '#' + encodeURIComponent(JSON.stringify(forPage)));
+  Pebble.openURL(CONFIG_URL + '?cb=' + Date.now() + '&platform=' + watchPlatform() + '#' + encodeURIComponent(JSON.stringify(forPage)));
 });
 
 Pebble.addEventListener('webviewclosed', function (e) {

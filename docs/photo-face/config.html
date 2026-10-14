@@ -28,9 +28,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Permanent+Marker&family=Special+Elite&family=Monoton&family=Abril+Fatface&family=Black+Ops+One&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css">
-  <link rel="stylesheet" href="../shared/theme.css?v=20260607b">
+  <link rel="stylesheet" href="../shared/theme.css?v=20261013a">
   <link rel="stylesheet" href="../shared/theme-retro.css?v=20260808a">
-  <link rel="stylesheet" href="../shared/face-ui.css?v=20260901a">
+  <link rel="stylesheet" href="../shared/face-ui.css?v=20261013a">
   <style>
     article.disabled { opacity: .55; }
     /* Gallery header: name + end/enabled toggles + delete, all on one line. */
@@ -446,7 +446,7 @@
             <img id="pimg" alt="">
             <div id="ovl"><div class="clk">10:08</div><div class="inf"></div></div>
           </div>
-          <span class="edge">PHOTO FACE&nbsp;&nbsp;·&nbsp;&nbsp;200 ▸ 228&nbsp;&nbsp;·&nbsp;&nbsp;64</span>
+          <span class="edge" id="edge">PHOTO FACE&nbsp;&nbsp;·&nbsp;&nbsp;200 ▸ 228&nbsp;&nbsp;·&nbsp;&nbsp;64</span>
         </div>
       </figure>
 
@@ -518,9 +518,9 @@
     </div>
   </main>
 
-  <script src="../shared/pebble-image.js?v=20260928a"></script>
-  <script src="../shared/face-crop.js?v=20260917a"></script>
-  <script src="../shared/face-config.js?v=20260901a"></script>
+  <script src="../shared/pebble-image.js?v=20261013a"></script>
+  <script src="../shared/face-crop.js?v=20261013a"></script>
+  <script src="../shared/face-config.js?v=20261014a"></script>
   <script>
     // >>>GEN:GALLERY>>>
     var GALLERY = [
@@ -568,6 +568,9 @@
     var shuffleEl = document.getElementById('shuffle');
     var previewEl = document.getElementById('pimg');
     var statusEl = document.getElementById('status');
+    if (PebbleImage.ROUND) {
+      document.getElementById('edge').textContent = 'PHOTO FACE\u00a0\u00a0·\u00a0\u00a0260 ◯ 260\u00a0\u00a0·\u00a0\u00a064';
+    }
 
     function defaultCfg() {
       // One default gallery per library category (must match the PKJS).
@@ -628,13 +631,14 @@
     // Resolve an item ref to a thumbnail URL + label.
     function refThumb(ref) {
       if (ref.charAt(0) === 'b' || ref.charAt(0) === 'r') { var g = LIB[ref.slice(2)]; return g ? g.file : ''; }
-      if (ref.charAt(0) === 'u') { var id = ref.slice(2); return dataUrl(cfg.uploads[id] || thumbs[id] || ''); }
+      // A round upload's bytes are a strip pack, which a browser can't show.
+      if (ref.charAt(0) === 'u') { var id = ref.slice(2); return dataUrl((!PebbleImage.ROUND && cfg.uploads[id]) || thumbs[id] || ''); }
       return '';
     }
 
     // Gallery-card thumbnail: a small JPEG of the photo as the watch will show
     // it. Kept on the phone in place of the 30 KB PNG for the page's benefit.
-    var THUMB_W = 96, THUMB_H = 109;
+    var THUMB_W = 96, THUMB_H = PebbleImage.ROUND ? 96 : 109;
     function makeThumb(img, crop, rect) {
       var r = PebbleImage.sourceRect(img, rect);
       var cv = document.createElement('canvas'), w, h, dw, dh;
@@ -650,7 +654,7 @@
       return cv.toDataURL('image/jpeg', 0.7).split(',')[1];
     }
     // A phone photo can be 50 megapixels; the cropper pans it and the watch
-    // gets 200x228 of it, so one downscale to ~1200px serves both.
+    // gets 200x228 (260x260 on Round 2) of it, so one downscale to ~1200px serves both.
     var WORK_MAX = 1200;
     function workingCopy(img) {
       var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
@@ -687,7 +691,7 @@
       var img = new Image();
       img.onload = function () {
         PebbleImage.processImage(img, { crop: true }).then(function (r) {
-          setPreview('data:image/png;base64,' + r.b64, label);
+          setPreview('data:image/png;base64,' + r.preview, label);
         });
       };
       img.src = file;
@@ -806,7 +810,7 @@
           if (!used) { delete cfg.uploads[oid]; delete thumbs[oid]; delete newThumbs[oid]; }
         }
         added++;
-        setPreview(dataUrl(r.b64), 'Upload (' + r.bytes + ' bytes)');
+        setPreview(dataUrl(r.preview), 'Upload (' + r.bytes + ' bytes)');
         return true;
       }
       // orig/url: the decoded original and its object URL, kept alive until the
@@ -841,7 +845,7 @@
           var choice = autoAll ? Promise.resolve({ action: 'asis' }) : FaceCrop.open(src, {
             remaining: list.length - i - 1,
             preview: function (rect, fit) {
-              return PebbleImage.processImage(src, { crop: !fit, rect: rect }).then(function (r) { return dataUrl(r.b64); });
+              return PebbleImage.processImage(src, { crop: !fit, rect: rect }).then(function (r) { return dataUrl(r.preview); });
             }
           });
           choice.then(function (res) {

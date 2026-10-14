@@ -21,6 +21,13 @@ import { syncFaceRuntime } from './lib/face-runtime.mjs';
 //                                            un-streamable images are DROPPED
 //                                            from the catalog)
 //   src/faces/photo-face/resources/images/builtin-<name>.png  (bundled only)
+// and the same set cut for Pebble Round 2 (gabbro, 260x260 circle):
+//   docs/photo-face/processed/round/<name>.png   page previews
+//   docs/photo-face/processed/round/<name>.b64   streamed strip packs
+//   src/faces/photo-face/resources/images/builtin-<name>-round.pack  (bundled
+//                                            only: a raw resource under the same
+//                                            name, targeted at gabbro)
+// An image either shape can't stream is dropped from the catalog for both.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -29,6 +36,7 @@ const root = process.cwd();
 const docsDir = path.join(root, 'docs', 'photo-face');
 const imgDir = path.join(docsDir, 'img');
 const processedDir = path.join(docsDir, 'processed');
+const roundDir = path.join(processedDir, 'round');
 const faceDir = path.join(root, 'src', 'faces', 'photo-face');
 const resDir = path.join(faceDir, 'resources', 'images');
 
@@ -54,9 +62,9 @@ const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
 // --- Convert: everything gets a preview PNG + streamable b64; the first image
 // of each category additionally becomes a bundled flash resource. ------------
-mkdirSync(processedDir, { recursive: true });
+rmSync(processedDir, { recursive: true, force: true });
+mkdirSync(roundDir, { recursive: true });
 mkdirSync(resDir, { recursive: true });
-for (const f of readdirSync(processedDir)) rmSync(path.join(processedDir, f));
 for (const f of readdirSync(resDir)) rmSync(path.join(resDir, f));
 
 // Conversion lives in the SHARED converter, scripts/lib/emery-image.py — one
@@ -74,12 +82,19 @@ for (const cat of manifest.categories) {
       png: path.join(processedDir, `${im.file}.png`),
       b64: path.join(processedDir, `${im.file}.b64`),
     };
-    if (im.focus) { job.focus = im.focus; }
+    const round = {
+      src: job.src,
+      shape: 'round',
+      png: path.join(roundDir, `${im.file}.png`),
+      b64: path.join(roundDir, `${im.file}.b64`),
+    };
+    if (im.focus) { job.focus = im.focus; round.focus = im.focus; }
     if (i === 0) {
       job.dests = [path.join(resDir, `builtin-${im.file}.png`)];
+      round.dests = [path.join(resDir, `builtin-${im.file}-round.pack`)];
       bundled.push(im.file);
     }
-    jobs.push(job);
+    jobs.push(job, round);
   });
 }
 const pyOut = execFileSync('python3', [path.join(root, 'scripts', 'lib', 'emery-image.py')], {
@@ -99,6 +114,7 @@ for (const name of dropped) {
     console.error(`WARN: bundled ${name} exceeds the stream cap — dropping it from the catalog too.`);
     bundled.splice(bundled.indexOf(name), 1);
     rmSync(path.join(resDir, `builtin-${name}.png`), { force: true });
+    rmSync(path.join(resDir, `builtin-${name}-round.pack`), { force: true });
   }
 }
 
@@ -150,16 +166,20 @@ writeFileSync(cPath, replaceRegion(readFileSync(cPath, 'utf8'), cLit, 'main.c'))
 const pkgPath = path.join(faceDir, 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 // Keep every non-generated resource (custom fonts etc.); only the bundled
-// IMAGE_B_* rows belong to this generator.
+// IMAGE_B_* rows belong to this generator. Each image is two rows under one
+// name: the PNG for emery and the strip pack for gabbro.
 pkg.pebble.resources.media = [
   ...(pkg.pebble.resources.media || []).filter((m) => !String(m.name).startsWith('IMAGE_B_')),
-  ...bundled.map((n) => ({
-    type: 'png', name: resName(n), file: `images/builtin-${n}.png`,
-  })),
+  ...bundled.flatMap((n) => [
+    { type: 'png', name: resName(n), file: `images/builtin-${n}.png`, targetPlatforms: ['emery'] },
+    { type: 'raw', name: resName(n), file: `images/builtin-${n}-round.pack`, targetPlatforms: ['gabbro'] },
+  ]),
 ];
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
-const flash = bundled.reduce((s, n) => s + statSync(path.join(resDir, `builtin-${n}.png`)).size, 0);
+// Each platform gets its own resource pack, so report the larger of the two.
+const flashOf = (suffix) => bundled.reduce((s, n) => s + statSync(path.join(resDir, `builtin-${n}${suffix}`)).size, 0);
+const flash = Math.max(flashOf('.png'), flashOf('-round.pack'));
 console.log(`${allNames.length} images in ${catalog.length} categories `
   + `(${bundled.length} bundled = ${(flash / 1024).toFixed(0)}KB flash, `
   + `${allNames.length - bundled.length} streamed, ${dropped.size} dropped un-streamable)`);

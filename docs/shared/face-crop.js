@@ -1,7 +1,7 @@
-// Crop / zoom step for photo uploads on Pebble Time 2 settings pages.
+// Crop / zoom step for photo uploads on Pebble Time 2 / Round 2 settings pages.
 //
 // FaceCrop.open(source, opts) shows a modal with the photo behind a frame in
-// the watch's 200:228 shape. Drag pans, pinch or the slider zooms (wheel on a
+// the watch's shape (200:228, or a circle on Round 2). Drag pans, pinch or the slider zooms (wheel on a
 // desktop), and a live preview shows the real watch-side conversion of the
 // current crop, so what the user sees is what the face will draw.
 //
@@ -22,7 +22,10 @@
 (function (global) {
   'use strict';
 
-  var RATIO = 228 / 200;      // frame height / width, the Emery screen
+  // Frame height / width: the Emery screen, or Round 2's square (drawn as a
+  // circle; the corners never reach the watch).
+  var ROUND = !!(global.PebbleImage && global.PebbleImage.ROUND);
+  var RATIO = ROUND ? 1 : 228 / 200;
   var MAX_ZOOM = 4;           // relative to "just covers the frame"
   var PREVIEW_DELAY_MS = 120;
 
@@ -46,7 +49,10 @@
     '.fc-actions button{margin:0;width:100%;padding:.55rem .6rem;font-size:.9rem}',
     '.fc-actions .fc-wide{grid-column:1 / -1}',
     '.fc-actions .fc-quiet{background:none;border:0;color:var(--pico-muted-color,#999);text-decoration:underline;font-size:.8rem;padding:.35rem}',
-    '@media (max-width:380px){.fc-side{width:80px}.fc-side img{width:80px;height:91px}}'
+    '@media (max-width:380px){.fc-side{width:80px}.fc-side img{width:80px;height:91px}}',
+    '.pebble-round .fc-frame,.pebble-round .fc-side img{border-radius:50%}',
+    '.pebble-round .fc-side img{height:100px}',
+    '@media (max-width:380px){.pebble-round .fc-side img{height:80px}}'
   ].join('\n');
 
   var styled = false;

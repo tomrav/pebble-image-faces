@@ -1,7 +1,14 @@
 # photo-face (Photo Face)
 
-A generic photo watchface for Pebble Time 2 (Emery): one photo full-screen with a
-clock overlay, advancing on a wrist shake or a rotation timer.
+A generic photo watchface for Pebble Time 2 (Emery) and Pebble Round 2 (Gabbro):
+one photo full-screen with a clock overlay, advancing on a wrist shake or a
+rotation timer.
+
+On Round 2 every photo is cut 260x260 and black outside the circle
+(`processed/round/`, bundled `builtin-*-round.pack`), uploads are cropped
+square on the settings page (`?platform=gabbro`), and the overlay pulls corner
+cells in to the circle. See `src/shared/image-face/face-image.h` for how a full
+64-colour round image fits in the watch's memory.
 
 It is the generic sibling of the `touch-glass` watchapp (a private project this
 face was derived from). The point of it is that

@@ -7,6 +7,8 @@
   border-radius: var(--pico-border-radius);
   overflow: hidden; image-rendering: pixelated;
 }
+/* Pebble Round 2 (?platform=gabbro, see pebble-image.js): 260x260 circle. */
+.pebble-round #watch { width: 260px; height: 260px; border-radius: 50%; }
 #watch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 #ovl { position: absolute; left: 0; right: 0; text-align: center; line-height: 1.05; }
 #ovl .clk { font-weight: 800; font-size: 38px; letter-spacing: 1px; font-family: "Helvetica Neue", Arial, sans-serif; }

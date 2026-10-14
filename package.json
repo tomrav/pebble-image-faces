@@ -16,6 +16,7 @@
     "pebble:gen-faces": "node scripts/gen-franchise-faces.mjs",
     "pebble:gen-photo-face": "node scripts/gen-photo-face.mjs",
     "pebble:import-photo-library": "node scripts/import-photo-library.mjs",
+    "pebble:import-round-art": "python3 scripts/import-round-art.py",
     "pebble:publish-config": "node scripts/publish-config.mjs",
     "pebble:sync-runtime": "node scripts/sync-face-runtime.mjs",
     "pebble:test-runtime": "node --test tests/image-face/*.test.cjs"

@@ -1,6 +1,6 @@
 # Photo Face — appstore listing
 
-Release prepared for 2026-09-28: 1.1.8; notes in `release-1.1.8.txt`.
+Release prepared for 2026-10-14: 1.2.0 (Pebble Round 2 support); notes in `release-1.2.0.txt`.
 
 Previously released: 1.1.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.1.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups, multi-file upload on the
@@ -8,6 +8,8 @@ settings page; settings page deployed the same day).
 
 Listed on the official Pebble Appstore since 2026-08-07 (first submitted 2026-08-06).
 Store requirements: screenshots exactly 200x228, banner exactly 720x320, icons 80x80 + 144x144.
+Round 2 (gabbro) screenshots, 260x260, are in `screenshots-round/`: emulator captures
+(`EMU=gabbro capture.sh`) composed with `compose.py --platform gabbro --scale 1`.
 
 Assets in this directory: `app-icon-144.png`, `app-icon-80.png`,
 `app-icon-48.png`, `banner-720x320.png`, `screenshots/1..5.png`, `showcase.gif` + `showcase.webp` (looping style/data-point tour, 400x456, real overlay over the full-colour originals;
@@ -47,6 +49,7 @@ The settings page previews everything before you save.
 
 ## Release notes history (latest first; 1.0.2's note was reworded 2026-08-08)
 
+- 1.2.0 — Pebble Round 2 support: round 260x260 photos in all 64 colours, round settings preview and crop, overlay kept inside the circle. See `release-1.2.0.txt`.
 - 1.1.8 — Failed phone saves are reported on the settings page instead of silently reverting. See `release-1.1.8.txt`.
 - 1.1.7 — Settings page moved to image-faces-config.pages.dev (the repo is public); weather credit and location note. See `release-1.1.7.txt`.
 - 1.1.6 — Top clock seated under the top-row data points by measured per-style ink insets (LCD/Neon overlapped). See `release-1.1.6.txt`.

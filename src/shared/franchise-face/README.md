@@ -99,4 +99,8 @@ catalog), with up to 48 streamed images cached offline subject to available byte
 Phone prefetch and HTTP requests have finite retries/timeouts. Settings callbacks
 accept only Pebble's close URL or the SDK's exact loopback /close? endpoint.
 
-Run `npm run pebble:test-runtime`; then build and visually test Ghibli on Emery.
+Run `npm run pebble:test-runtime`; then build and visually test Ghibli on Emery
+and on Round 2 (`npm run pebble:test -- ghibli-face --platform gabbro`). Each
+image needs a Round 2 cut in `media/epaper-round/` (`npm run pebble:import-round-art`),
+and gabbro's resources must stay under 256KB: round packs run ~20-23KB each, so
+eight bundled images is the ceiling.

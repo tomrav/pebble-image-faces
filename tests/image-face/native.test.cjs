@@ -76,5 +76,33 @@ int main(void){
  store[SLOT_DATA_KEY(0)][0]^=1;persist_write_data(SLOT_HDR_KEY(0),&h,sizeof(h));decode_fail=true;assert(cache_read_start(0,id,600,0,0,true));drain();assert(failed==2&&!s_read_buf&&!s_bitmap);
  puts("passed");}
 `;
- assert.match(native('reader',read('tests/image-face/cache-mocks.h')+graphics+cache+callbacks),/passed/);
+ const image='src/shared/image-face/face-image.h',show=fn(image,'image_drop_bitmap')+'\n'+fn(image,'image_show_png')+'\n';
+ assert.match(native('reader',read('tests/image-face/cache-mocks.h')+graphics+show+cache+callbacks),/passed/);
+});
+test('native round strip packs parse and the 6-bit circle canvas round-trips',()=>{
+ const image=read('src/shared/image-face/face-image.h');
+ const pure=image.slice(image.indexOf('#define CANVAS_SIZE'),image.indexOf('static uint8_t *s_canvas;'));
+ const S=260;let visible=0;
+ for(let y=0;y<S;y++)for(let x=0;x<S;x++)if((2*x+1-S)**2+(2*y+1-S)**2<=S*S)visible++;
+ const pack=path.resolve('src/faces/photo-face/resources/images/builtin-space-1-round.pack');
+ const rect=path.resolve('src/faces/photo-face/resources/images/builtin-space-1.png');
+ const src=`#include <stdint.h>\n#include <stdbool.h>\n#include <string.h>\n#include <stdlib.h>\n#include <stdio.h>\n#include <assert.h>\n#define PBL_DISPLAY_WIDTH 260\n`+pure+`
+static uint8_t *load(const char*p,uint32_t*n){FILE*f=fopen(p,"rb");assert(f);fseek(f,0,SEEK_END);*n=ftell(f);rewind(f);uint8_t*b=malloc(*n);assert(fread(b,1,*n,f)==*n);fclose(f);return b;}
+int main(void){
+ uint32_t n,m;uint8_t*b=load("${pack}",&n),*r=load("${rect}",&m);
+ assert(png_is_strip_pack(b,n)&&!png_is_strip_pack(r,m));
+ uint32_t off=0;int strips=0;while(off<n){uint32_t s=png_span(b+off,n-off);assert(s);off+=s;strips++;}
+ assert(off==n&&strips==10);
+ assert(png_span(b,n-1)==png_span(b,n)&&!png_span(b,40));
+ b[0]^=1;assert(!png_span(b,n)&&!png_is_strip_pack(b,n));
+ canvas_init_rows();
+ assert(s_row_start[CANVAS_SIZE]==${visible});
+ for(int y=0;y<CANVAS_SIZE;y++){assert(s_row_x0[y]==s_row_x0[CANVAS_SIZE-1-y]);assert(s_row_start[y+1]-s_row_start[y]==CANVAS_SIZE-2u*s_row_x0[y]);}
+ uint32_t bytes=canvas_bytes();uint8_t*c=calloc(bytes,1);
+ for(uint32_t i=0;i<s_row_start[CANVAS_SIZE];i++)canvas_put(c,i,(uint8_t)(i*37+i/7));
+ for(uint32_t i=0;i<s_row_start[CANVAS_SIZE];i++)assert(canvas_get(c,i)==((i*37+i/7)&0x3F));
+ canvas_put(c,5,0x3F);canvas_put(c,5,0);assert(canvas_get(c,4)==((4*37)&0x3F)&&canvas_get(c,6)==((6*37)&0x3F));
+ printf("passed %u bytes\\n",bytes);}
+`;
+ assert.match(native('round',src),/passed 39\d{3} bytes/);
 });

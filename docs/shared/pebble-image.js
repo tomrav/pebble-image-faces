@@ -1,16 +1,27 @@
-// Shared image pipeline for Pebble Time 2 (Emery) settings pages.
+// Shared image pipeline for Pebble Time 2 (Emery) and Round 2 (gabbro)
+// settings pages.
 //
-// Converts an <img> to an Emery-palettized PNG — 64 colors (2 bits/channel),
+// Converts an <img> to a palettized PNG — 64 colors (2 bits/channel),
 // Floyd–Steinberg dithering — sized to FIT (contain) or FILL (cover) the
-// 200x228 screen, returned as base64 for chunked transfer to the watch. This
-// is the only format the watch decodes at runtime (gbitmap_create_from_png_data).
+// screen, returned as base64 for chunked transfer to the watch.
+//
+// The phone opens the page with ?platform=<name>. On gabbro the screen is a
+// 260x260 circle: images are cut square, painted black outside the circle and
+// sent as a STRIP PACK (one PNG per STRIP_ROWS rows, back to back), which the
+// watch decodes strip by strip (src/shared/image-face/face-image.h). The twin
+// of scripts/lib/emery-image.py; keep the two in step.
 //
 // Hosted on GitHub Pages and shared by every app/face config page, so the
 // conversion lives in exactly one place. Exposes window.PebbleImage.
 (function (global) {
   'use strict';
 
-  var MAX_W = 200, MAX_H = 228;
+  var PLATFORM = (location.search.match(/[?&]platform=([a-z]+)/) || [])[1] || 'emery';
+  var ROUND = PLATFORM === 'gabbro';
+  var MAX_W = ROUND ? 260 : 200, MAX_H = ROUND ? 260 : 228;
+  var STRIP_ROWS = 26;
+  // Pages style the round preview off this class (face-ui.css, theme.css).
+  if (ROUND) { document.documentElement.classList.add('pebble-round'); }
 
   // MUST match MAX_IMAGE_BYTES in the watchapp C code: the watch rejects any
   // transfer whose declared total exceeds it, so a larger PNG never displays.
@@ -133,10 +144,57 @@
     return btoa(s);
   }
 
-  // Render an Image (or canvas) to an Emery palettized PNG. opts.crop = fill
+  // Black outside the circle inscribed in the w x h canvas: the same pixel-centre
+  // test as round_mask() in emery-image.py and the watch's canvas rows.
+  function maskRound(ctx, w, h) {
+    var im = ctx.getImageData(0, 0, w, h), d = im.data, r2 = Math.min(w, h) * Math.min(w, h);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var dx = 2 * x + 1 - w, dy = 2 * y + 1 - h;
+        if (dx * dx + dy * dy > r2) { var o = (y * w + x) * 4; d[o] = d[o + 1] = d[o + 2] = 0; }
+      }
+    }
+    ctx.putImageData(im, 0, 0);
+  }
+
+  // The dither pushes error across the circle's edge; set those pixels back to
+  // black, as emery-image.py does.
+  function scrubRound(q, w, h) {
+    var black = -1, r2 = Math.min(w, h) * Math.min(w, h);
+    for (var i = 0; i < q.palette.length; i++) {
+      if (!q.palette[i][0] && !q.palette[i][1] && !q.palette[i][2]) { black = i; }
+    }
+    if (black < 0) { black = q.palette.length; q.palette.push([0, 0, 0]); }
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var dx = 2 * x + 1 - w, dy = 2 * y + 1 - h;
+        if (dx * dx + dy * dy > r2) { q.indices[y * w + x] = black; }
+      }
+    }
+  }
+
+  // One PNG per band of rows, each with only the colours it uses.
+  async function buildStripPack(w, h, q) {
+    var out = [];
+    for (var y0 = 0; y0 < h; y0 += STRIP_ROWS) {
+      var rows = Math.min(STRIP_ROWS, h - y0), map = {}, pal = [], idx = new Array(rows * w);
+      for (var i = 0; i < rows * w; i++) {
+        var c = q.indices[y0 * w + i], k = map[c];
+        if (k === undefined) { k = pal.length; map[c] = k; pal.push(q.palette[c]); }
+        idx[i] = k;
+      }
+      out = out.concat(await buildPNG(w, rows, idx, pal));
+    }
+    return out;
+  }
+
+  // Render an Image (or canvas) to a palettized PNG for the watch. opts.crop = fill
   // (cover) vs fit (contain). opts.rect = { x, y, w, h } picks a region of the
   // source, in source pixels, to treat as the whole picture (the cropper's
-  // output); absent, the whole source is used. Returns { b64, w, h, colors, bytes }.
+  // output); absent, the whole source is used. On round both modes fill the
+  // whole 260x260 square (fit letterboxes on black) so the watch always gets a
+  // strip pack. Returns { b64, preview, w, h, colors, bytes }: b64 is what the
+  // watch receives, preview an ordinary PNG of the same pixels for the page.
   async function processImage(img, opts) {
     opts = opts || {};
     var r = sourceRect(img, opts.rect);
@@ -148,6 +206,14 @@
       cv.width = w; cv.height = h;
       ctx = cv.getContext('2d');
       ctx.drawImage(img, r.x, r.y, r.w, r.h, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh);
+    } else if (ROUND) {
+      var fr = Math.min(MAX_W / r.w, MAX_H / r.h);
+      var fw = Math.round(r.w * fr), fh = Math.round(r.h * fr);
+      w = MAX_W; h = MAX_H;
+      cv.width = w; cv.height = h;
+      ctx = cv.getContext('2d');
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, r.x, r.y, r.w, r.h, Math.round((w - fw) / 2), Math.round((h - fh) / 2), fw, fh);
     } else {
       var f = Math.min(MAX_W / r.w, MAX_H / r.h, 1);
       w = Math.max(1, Math.round(r.w * f));
@@ -156,10 +222,14 @@
       ctx = cv.getContext('2d');
       ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, w, h);
     }
+    if (ROUND) { maskRound(ctx, w, h); }
     var q = quantize(ctx, w, h);
-    var png = await buildPNG(w, h, q.indices, q.palette);
-    var u8 = new Uint8Array(png);
-    return { b64: bytesToBase64(u8), w: w, h: h, colors: q.palette.length, bytes: u8.length };
+    if (ROUND) { scrubRound(q, w, h); }
+    var png = new Uint8Array(await buildPNG(w, h, q.indices, q.palette));
+    var watch = ROUND ? new Uint8Array(await buildStripPack(w, h, q)) : png;
+    var preview = bytesToBase64(png);
+    return { b64: ROUND ? bytesToBase64(watch) : preview, preview: preview,
+             w: w, h: h, colors: q.palette.length, bytes: watch.length };
   }
 
   // Where to send the result: the host (Pebble app / pypkjs) passes ?return_to=…;
@@ -227,6 +297,7 @@
   }
 
   global.PebbleImage = {
+    PLATFORM: PLATFORM, ROUND: ROUND,
     MAX_W: MAX_W, MAX_H: MAX_H, MAX_IMAGE_BYTES: MAX_IMAGE_BYTES,
     MAX_CONFIG_URL_CHARS: MAX_CONFIG_URL_CHARS,
     MAX_SELECTION: 64,

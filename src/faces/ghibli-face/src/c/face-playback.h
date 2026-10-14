@@ -447,7 +447,7 @@ static void notify_cursor(int idx) {
 static void cache_read_complete(bool ok, uint32_t id, uint32_t flags, int idx, bool ack) {
   if (id != s_desired_id) { return; }
   if (!ok) {
-    s_need_image = !s_bitmap;
+    s_need_image = !image_shown();
     set_loading(false);
     if (ack) { reply_id(MESSAGE_KEY_CACHE_MISS, id); }
     else if (connection_service_peek_pebble_app_connection()) {

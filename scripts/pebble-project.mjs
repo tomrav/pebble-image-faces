@@ -12,6 +12,9 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const repoRoot = process.cwd();
+// Emulator platforms the faces target. Emery (Pebble Time 2) is the default;
+// gabbro is Pebble Round 2. Pick one with `--platform <name>`.
+const platforms = ['emery', 'gabbro'];
 const kinds = [
   { label: 'app', root: path.join(repoRoot, 'src', 'apps') },
   { label: 'face', root: path.join(repoRoot, 'src', 'faces') },
@@ -70,6 +73,8 @@ function usage(exitCode = 0) {
   npm run pebble:test -- <project-name>
   npm run pebble:test:all
 
+Emulator, logs, screenshot and test take --platform <${platforms.join('|')}> (default emery).
+
 Available projects:
 ${names}`);
 
@@ -93,7 +98,7 @@ function resolveProject(name) {
 }
 
 // Resolve which Pebble connection to target from trailing CLI flags.
-// Defaults to the Emery emulator; `--device`/`--cloudpebble` use the
+// Defaults to the emulator for --platform; `--device`/`--cloudpebble` use the
 // CloudPebble proxy, and `--phone <IP>` uses the phone developer connection.
 function connectionArgs(extraArgs) {
   const phoneIndex = extraArgs.indexOf('--phone');
@@ -110,7 +115,7 @@ function connectionArgs(extraArgs) {
     return ['--cloudpebble'];
   }
 
-  return ['--emulator', 'emery'];
+  return ['--emulator', platform];
 }
 
 // The SDK bundles pebble-js-app.js.map into the .pbw, and its sourcesContent
@@ -170,7 +175,8 @@ function runPebbleCommand(project, args) {
 }
 
 function screenshotPathFor(project) {
-  return path.join(repoRoot, 'artifacts', 'screenshots', `${project.name}.png`);
+  const suffix = platform === 'emery' ? '' : `-${platform}`;
+  return path.join(repoRoot, 'artifacts', 'screenshots', `${project.name}${suffix}.png`);
 }
 
 function ensureArtifactsDir() {
@@ -197,7 +203,7 @@ function captureScreenshot(project) {
   // It is surfaced in full when something goes wrong.
   const result = spawnSync(
     'pebble',
-    ['screenshot', '--emulator', 'emery', '--no-open', temp],
+    ['screenshot', '--emulator', platform, '--no-open', temp],
     { cwd: project.dir, encoding: 'utf8' },
   );
 
@@ -250,7 +256,7 @@ function testProject(project) {
 
   runPebbleCommand(project, ['build']);
   stripSourceMaps(project);
-  runPebbleCommand(project, ['install', '--emulator', 'emery']);
+  runPebbleCommand(project, ['install', '--emulator', platform]);
 
   if (watchface) {
     captureScreenshot(project);
@@ -275,6 +281,19 @@ function testAllProjects() {
 
 const [action, projectName] = process.argv.slice(2);
 const extraArgs = process.argv.slice(4);
+
+function platformArg(args) {
+  const index = args.indexOf('--platform');
+  if (index === -1) return 'emery';
+  const name = args[index + 1];
+  if (!platforms.includes(name)) {
+    console.error(`--platform must be one of: ${platforms.join(', ')}`);
+    process.exit(1);
+  }
+  return name;
+}
+
+const platform = platformArg(process.argv.slice(3));
 
 if (!action || action === 'help' || action === '--help' || action === '-h') {
   usage(0);
@@ -306,7 +325,7 @@ switch (action) {
     runPebble(project, ['build'], () => stripSourceMaps(project));
     break;
   case 'emulator':
-    runPebble(project, ['install', '--emulator', 'emery']);
+    runPebble(project, ['install', '--emulator', platform]);
     break;
   case 'cloud':
     runPebble(project, ['install', '--cloudpebble']);

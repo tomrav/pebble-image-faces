@@ -1,6 +1,7 @@
 # Photo Face and Ghibli Time
 
-Two watchfaces for the Pebble Time 2 (Emery, 200×228 64-colour e-paper) that
+Two watchfaces for the Pebble Time 2 (Emery, 200×228 64-colour e-paper) and
+Pebble Round 2 (Gabbro, 260×260 round 64-colour e-paper) that
 put a full-screen image behind a configurable clock, advancing on a wrist
 shake or a timer. Both are on the official Pebble Appstore.
 
@@ -28,6 +29,7 @@ docs/                       hosted settings pages + streamed images
   photo-face/               Photo Face page, photo library (img/, library.json)
   faces/ghibli/             GENERATED Ghibli Time page, thumbnails, .b64 streams
 media/epaper/               Ghibli image packs, 200×228 palettized
+media/epaper-round/         the same packs cut 260×260 round for Round 2
 scripts/                    build runner, generators, publisher, store GIF tools
 tests/image-face/           Node + native C regression suite for the engine
 ```
@@ -39,7 +41,7 @@ so every project still builds on its own with `pebble build`. Edit
 ## Prerequisites
 
 - The Pebble SDK and `pebble` tool (https://developer.repebble.com), with the
-  `emery` emulator.
+  `emery` and `gabbro` emulators.
 - Node 18+ (no npm packages required).
 - Python 3 with Pillow and numpy, for image conversion and store assets.
 - A C compiler, for the native part of the test suite.
@@ -50,8 +52,10 @@ so every project still builds on its own with `pebble build`. Edit
 npm run pebble:build -- photo-face        # syncs the runtime copies, builds, strips source maps
 npm run pebble:emulator -- ghibli-face    # install in the Emery emulator
 npm run pebble:test -- photo-face         # build + install + screenshot
+npm run pebble:test -- photo-face --platform gabbro   # the same on Round 2
 npm run pebble:test-runtime               # engine regressions, no SDK needed
 npm run pebble:gen-faces                  # regenerate ghibli-face + docs/faces/ghibli
+npm run pebble:import-round-art           # re-cut media/epaper-round from the originals
 npm run pebble:gen-photo-face             # regenerate Photo Face's photo library
 npm run pebble:publish-config             # deploy docs/ to Cloudflare Pages
 ```

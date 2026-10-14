@@ -1,0 +1,7 @@
+Ghibli Time now runs on Pebble Round 2.
+
+- Every image is recut for the round screen in all 64 colours, from the original artwork
+- The settings page shows a round watch preview
+- The clock and data points stay inside the circle
+- Porco Rosso now streams from your phone instead of being built in
+- More reliable image loading

@@ -529,16 +529,9 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
       }
 
       if (s_phone_selection && png_id != s_desired_id) { free(png); return; }
-      // Free the shown image before decoding so the ~46KB bitmap and the PNG
-      // decoder never peak together.
-      bitmap_layer_set_bitmap(s_image_layer, NULL);
-      if (s_bitmap) {
-        gbitmap_destroy(s_bitmap);
-        s_bitmap = NULL;
-      }
-
-      GBitmap *decoded = gbitmap_create_from_png_data(png, png_len);
-      if (!decoded) {
+      // image_show_png() frees the shown image before decoding, so the old
+      // bitmap and the PNG decoder never peak together.
+      if (!image_show_png(png, png_len)) {
         APP_LOG(APP_LOG_LEVEL_ERROR, "PNG decode failed (unsupported format or low memory)");
         free(png);
         set_loading(false);
@@ -546,9 +539,6 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
       }
 
       cancel_fallback();
-      s_bitmap = decoded;
-      bitmap_layer_set_bitmap(s_image_layer, s_bitmap);
-      layer_mark_dirty(bitmap_layer_get_layer(s_image_layer));
       set_loading(false);
       int displayed_idx = s_requested_idx;
       if (displayed_idx < 0) {
@@ -584,10 +574,7 @@ static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(root);
 
-  s_image_layer = bitmap_layer_create(bounds);
-  bitmap_layer_set_compositing_mode(s_image_layer, GCompOpSet);
-  bitmap_layer_set_alignment(s_image_layer, GAlignCenter);
-  layer_add_child(root, bitmap_layer_get_layer(s_image_layer));
+  image_layers_create(root, bounds);
 
   // Bar underlay: above the image, below every text/cell layer.
   s_bars_layer = layer_create(bounds);
@@ -671,11 +658,7 @@ static void window_unload(Window *window) {
   text_layer_destroy(s_time_shadow);
   layer_destroy(s_bars_layer);
   s_bars_layer = NULL;
-  bitmap_layer_destroy(s_image_layer);
-  if (s_bitmap) {
-    gbitmap_destroy(s_bitmap);
-    s_bitmap = NULL;
-  }
+  image_layers_destroy();
 }
 
 // Read the selection records; n comes from the record itself.

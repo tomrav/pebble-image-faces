@@ -512,10 +512,8 @@ static void cache_read_tick(void *data) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Cached image hash mismatch");
       cache_read_fail(true); return;
     }
-    bitmap_layer_set_bitmap(s_image_layer, NULL);
-    if (s_bitmap) { gbitmap_destroy(s_bitmap); s_bitmap = NULL; }
     uint32_t decode_start = cache_clock_ms();
-    GBitmap *decoded = gbitmap_create_from_png_data(s_read_buf, s_read_len);
+    bool decoded = image_show_png(s_read_buf, s_read_len);
     uint32_t decode_ms = cache_clock_ms() - decode_start;
     APP_LOG(APP_LOG_LEVEL_INFO, "Cache timing: header=%ums read=%ums decode=%ums total=%ums (%u bytes)",
             (unsigned int)s_read_header_ms, (unsigned int)s_read_io_ms,
@@ -526,9 +524,6 @@ static void cache_read_tick(void *data) {
     uint32_t id = s_read_id, len = s_read_len, hash = s_read_hash, flags = s_read_flags;
     bool ack = s_read_ack;
     cache_read_cancel();
-    s_bitmap = decoded;
-    bitmap_layer_set_bitmap(s_image_layer, s_bitmap);
-    layer_mark_dirty(bitmap_layer_get_layer(s_image_layer));
     cache_read_complete(true, id, flags, idx, ack);
     s_active_slot = slot; s_active_len = len; s_active_hash = hash;
     state_dirty();
@@ -627,20 +622,11 @@ static void show_builtin(int index) {
   // images themselves survive — only 1.0.12 wiped the cache for a built-in.
   img_slot_abort_write();
 
-  // Detach before freeing so old and new bitmaps never both peak on the heap.
-  bitmap_layer_set_bitmap(s_image_layer, NULL);
-  if (s_bitmap) {
-    gbitmap_destroy(s_bitmap);
-    s_bitmap = NULL;
-  }
-
-  s_bitmap = gbitmap_create_with_resource(s_builtin_resources[index]);
-  if (!s_bitmap) {
+  // Frees the shown image first, so old and new never both peak on the heap.
+  if (!image_show_resource(s_builtin_resources[index])) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Built-in %d failed to load", index);
     return;
   }
-  bitmap_layer_set_bitmap(s_image_layer, s_bitmap);
-  layer_mark_dirty(bitmap_layer_get_layer(s_image_layer));
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Showing built-in %d/%d from flash", index + 1, (int)BUILTIN_COUNT);
   set_loading(false);

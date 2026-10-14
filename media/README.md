@@ -15,6 +15,25 @@ Pack naming, per franchise id in `src/shared/franchise-face/franchises.json`:
 
 Set `PEBBLE_MEDIA=/path/to/epaper` to generate from packs kept elsewhere.
 
+## Round 2 cuts
+
+`epaper-round/<pack>/` holds the same images for Pebble Round 2: 260×260,
+black outside the circle, dithered to the same palette. The 200×228 cuts are
+too small to make a sharp circle, so `npm run pebble:import-round-art`
+(`scripts/import-round-art.py`) goes back to each original in `sources.csv`:
+it downloads it once into `.originals/` (gitignored), finds where the 200×228
+cut sits in it so the round cut keeps the same framing, and converts the
+square around it. Set `PEBBLE_MEDIA_ROUND` to generate from cuts kept
+elsewhere.
+
+When this was first run (2026-10-13), five records turned out not to be the
+source of their cut. Baron, Kamaji and Zeniba were corrected to the real
+originals. Porco Rosso (character) has no recoverable original; its round cut
+comes from a different, smaller still of the same scene (upscaled from 172px).
+The Cat Returns keeps its recorded poster, so its round cut shows the poster
+rather than the 200×228 cut's grass scene. The four film posters without a
+record were added from English Wikipedia.
+
 ## Studio Ghibli artwork (Ghibli Time)
 
 Ghibli Time is a non-commercial fan project. It is not affiliated with,

@@ -98,7 +98,8 @@ static GFont clock_font_for(int size) {
   return f ? f : fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD);
 }
 
-// Large + seconds can outgrow the 200px panel for the widest styles. Measured
+// Large + seconds can outgrow the panel (200px; less across round's top and
+// bottom rows) for the widest styles. Measured
 // in apply_layout() whenever style/seconds change; while true the clock (and
 // its paired data points) render at Medium instead of clipping.
 static bool s_large_too_wide;
@@ -415,6 +416,26 @@ static void draw_cell_run(GContext *ctx, int c, GFont font, GColor color,
   }
 }
 
+// Width of a cell's whole run of segments, separators included.
+static int cell_run_width(int c, GFont font) {
+  int total = 0;
+  for (int i = 0; i < s_cell_nseg[c]; i++) {
+    int dp = s_cell_seg[c][i];
+    if (i > 0) {
+      total += graphics_text_layout_get_content_size(" · ", font,
+          GRect(0, 0, 100, 40), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+    }
+    if (dp_is_glyph(dp)) { total += GLYPH_PX; }
+    else {
+      char t[24];
+      dp_text(dp, t, sizeof(t));
+      total += graphics_text_layout_get_content_size(t, font,
+          GRect(0, 0, 300, 40), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+    }
+  }
+  return total;
+}
+
 // A cell paints itself: optional solid bar, optional shadow pass, then the
 // run. Overflow simply clips at the layer edge (the settings-page preview
 // shows the same truncation).
@@ -433,21 +454,7 @@ static void cell_update_proc(Layer *layer, GContext *ctx) {
   if (glyph_y < 0) { glyph_y = 0; }
 
   // Total run width -> start x per column alignment (left/center/right).
-  int total = 0;
-  for (int i = 0; i < s_cell_nseg[c]; i++) {
-    int dp = s_cell_seg[c][i];
-    if (i > 0) {
-      total += graphics_text_layout_get_content_size(" · ", font,
-          GRect(0, 0, 100, 40), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
-    }
-    if (dp_is_glyph(dp)) { total += GLYPH_PX; }
-    else {
-      char t[24];
-      dp_text(dp, t, sizeof(t));
-      total += graphics_text_layout_get_content_size(t, font,
-          GRect(0, 0, 300, 40), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
-    }
-  }
+  int total = cell_run_width(c, font);
 
   int col = c % 3;
   int x = (col == 0) ? 0 : (col == 2) ? b.size.w - total : (b.size.w - total) / 2;
@@ -458,6 +465,26 @@ static void cell_update_proc(Layer *layer, GContext *ctx) {
   if (eff_bg() == 0) { draw_cell_run(ctx, c, font, op, x + 1, 1, text_h, glyph_y); }
   draw_cell_run(ctx, c, font, fg, x, 0, text_h, glyph_y);
 }
+
+#if defined(PBL_ROUND)
+// Round 2 (gabbro): how far in from each side a band of rows [y0, y1) has to
+// start to stay inside the circle — the panel's half-width minus the circle's
+// half-chord at the band's row farthest from the centre. Corner cells, the
+// spinner and the Large+seconds check all hang off this.
+static int round_inset(GRect b, int y0, int y1) {
+  int r = b.size.w / 2;
+  int d0 = b.size.h / 2 - y0, d1 = y1 - b.size.h / 2;
+  int d = d0 > d1 ? d0 : d1;
+  if (d <= 0) { return 0; }
+  if (d >= r) { return r; }
+  int sq = r * r - d * d, half = 0;
+  while ((half + 1) * (half + 1) <= sq) { half++; }
+  return r - half;
+}
+#define EDGE_INSET(b, y0, y1) round_inset((b), (y0), (y1))
+#else
+#define EDGE_INSET(b, y0, y1) 0
+#endif
 
 // Apply settings to the overlay layers: positions, font, colors, backdrop.
 static void apply_layout(void) {
@@ -470,13 +497,18 @@ static void apply_layout(void) {
   {
     static int measured_for = -1;
     int key = (s_set.font_size == 2 && s_set.seconds) ? s_set.font + 1 : 0;
+    // On round the top and bottom clock rows sit where the circle is ~70% of
+    // the panel wide, so the position joins the cache key there.
+    PBL_IF_ROUND_ELSE(key = key ? key * 3 + eff_clock_pos() : 0, (void)0);
     if (key != measured_for) {
       measured_for = key;
       s_large_too_wide = false;
       if (key) {
         GSize tw = graphics_text_layout_get_content_size("88:88:88", clock_font_for(2),
             GRect(0, 0, 400, 100), GTextOverflowModeWordWrap, GTextAlignmentLeft);
-        s_large_too_wide = tw.w > b.size.w - 4;
+        int avail = PBL_IF_ROUND_ELSE(eff_clock_pos() == 1 ? b.size.w - 4 : b.size.w * 7 / 10,
+                                      b.size.w - 4);
+        s_large_too_wide = tw.w > avail;
       }
     }
   }
@@ -491,7 +523,8 @@ static void apply_layout(void) {
 
   // EDGE_PAD keeps top/bottom rows (and the bottom clock block) a touch off
   // the panel edge so data points never sit flush against it.
-  const int EDGE_PAD = 6;
+  // Round pulls it further in: at 6px the circle is only ~80px across.
+  const int EDGE_PAD = PBL_IF_ROUND_ELSE(18, 6);
   // Top mirrors bottom: the clock-row stack hugs its screen edge and the
   // clock sits on its inner side (bottom: clock then text at the bottom edge;
   // top: text at the top edge, clock below it). The bottom stack can tuck
@@ -502,6 +535,13 @@ static void apply_layout(void) {
   // digits through the row. Place the digits' INK a fixed TOP_GAP under the
   // row's ink (which reaches ~2px past its content height).
   const int TOP_GAP = 6;
+#if defined(PBL_ROUND)
+  // Width of the clock's digits: a top clock must sit low enough for the
+  // circle to hold them, and side cells only stay beside them if they fit.
+  int clock_w = graphics_text_layout_get_content_size(s_set.seconds ? "00:00:00" : "00:00", clock_font(),
+      GRect(0, 0, b.size.w, clock_h + 20), GTextOverflowModeWordWrap, GTextAlignmentLeft).w;
+  int ink_top = ((unsigned)s_set.font < STYLE_COUNT) ? CLOCK_INK_TOP[s_set.font][eff_font_size()] : 0;
+#endif
   int clock_y;
   switch (eff_clock_pos()) {
     case 0: {
@@ -513,6 +553,17 @@ static void apply_layout(void) {
     case 1: clock_y = (b.size.h - block_h) / 2; break;
     default: clock_y = b.size.h - block_h - EDGE_PAD; break;
   }
+#if defined(PBL_ROUND)
+  // A top clock drops until its ink clears the edge pad and the circle holds
+  // its digits with room to spare.
+  if (eff_clock_pos() == 0) {
+    while (clock_y < b.size.h / 2 &&
+           (clock_y + ink_top < EDGE_PAD ||
+            b.size.w - 2 * round_inset(b, clock_y + ink_top, clock_y + ink_top + 1) < clock_w + 16)) {
+      clock_y++;
+    }
+  }
+#endif
 
   // With seconds on, a centered layer would re-center every tick as digit
   // widths change, wobbling the whole clock. Anchor it instead: left-align
@@ -594,7 +645,29 @@ static void apply_layout(void) {
       y = b.size.h - text_h - EDGE_PAD;
     }
 
-    layer_set_frame(s_cell_layer[c], GRect(4, y, b.size.w - 8, text_h + 4));
+#if defined(PBL_ROUND)
+    // Round: at the top and bottom the circle is too narrow for the digits
+    // plus a side cell on each side. A side cell that doesn't fit between the
+    // circle and the digits moves to the free band just inside the clock:
+    // above a bottom clock's ink, below a top clock.
+    // The same goes for a top or bottom row whose centre cell is in use: a
+    // side cell that doesn't fit beside it moves one line toward the middle.
+    if (col != 1 && row != 1) {
+      bool clock_row = (row == eff_clock_pos());
+      int centre_w = clock_row ? clock_w
+                   : (s_cell_nseg[row * 3 + 1] ? cell_run_width(row * 3 + 1, inf) : 0);
+      int room = (b.size.w - centre_w) / 2 - 8 - EDGE_INSET(b, y, y + text_h + 4);
+      if (centre_w && cell_run_width(c, inf) > room) {
+        if (clock_row) { y = (row == 0) ? clock_y + clock_h - 4 : clock_y + ink_top - text_h - 6; }
+        else { y += (row == 0) ? text_h + 4 : -(text_h + 4); }
+      }
+    }
+#endif
+
+    // Round: narrow the cell to the circle's chord over its band, which pulls
+    // side cells in from the corners (cells are one line, so height holds).
+    int inset = EDGE_INSET(b, y, y + text_h + 4);
+    layer_set_frame(s_cell_layer[c], GRect(4 + inset, y, b.size.w - 8 - 2 * inset, text_h + 4));
     layer_mark_dirty(s_cell_layer[c]);
 
     if (want_n < MAX_BARS) {
@@ -650,8 +723,9 @@ static void apply_layout(void) {
       } else if (row == 0) { y = EDGE_PAD; }
       else if (row == 1) { y = (b.size.h - SPIN_PX) / 2; }
       else { y = b.size.h - SPIN_PX - EDGE_PAD; }
-      int x = (col == 0) ? 4 : (col == 2) ? b.size.w - SPIN_PX - 4
-                                          : (b.size.w - SPIN_PX) / 2;
+      int inset = EDGE_INSET(b, y, y + SPIN_PX);
+      int x = (col == 0) ? 4 + inset : (col == 2) ? b.size.w - SPIN_PX - 4 - inset
+                                                  : (b.size.w - SPIN_PX) / 2;
       layer_set_frame(s_spinner_layer, GRect(x, y, SPIN_PX, SPIN_PX));
     }
   }

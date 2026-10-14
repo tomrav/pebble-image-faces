@@ -19,7 +19,19 @@
 (function () {
   'use strict';
 
-  var DEFAULT_SCREEN = { h: 228, clockH: 44, infoH: 16, pad: 4 };
+  // Screen geometry comes from pebble-image.js: 200x228, or 260x260 on Round 2.
+  var PI = window.PebbleImage || {};
+  var ROUND = !!PI.ROUND;
+  var DEFAULT_SCREEN = { h: PI.MAX_H || 228, clockH: 44, infoH: 16, pad: 4 };
+
+  // Mirrors round_inset() in face-overlay.h: how far a band of rows [y0, y1)
+  // must sit in from each side to stay inside the circle.
+  function roundInset(w, h, y0, y1) {
+    var r = Math.floor(w / 2), d = Math.max(Math.floor(h / 2) - y0, y1 - Math.floor(h / 2));
+    if (d <= 0) { return 0; }
+    if (d >= r) { return r; }
+    return r - Math.floor(Math.sqrt(r * r - d * d));
+  }
 
   function attach(cfg, opts) {
     opts = opts || {};
@@ -245,7 +257,7 @@
     });
 
     // --- Preview: clock (row-only) + per-cell stacks, mirroring the C ------
-    var H = 228, CLOCK_H = 48;
+    var W = PI.MAX_W || 200, H = PI.MAX_H || 228, CLOCK_H = 48;
     // Size steps (cfg.fontSize 0/1/2) mirror the C: clock block 38/48/60px,
     // fonts scaled ~0.8x / 1x / 1.25x. Zoom (not font-size) so every page's
     // own per-style px rules keep working untouched.
@@ -292,11 +304,24 @@
       // Clock block reserves room for the stack under it (mirrors apply_layout).
       var underCell = (cfg.clockPos || 0) * 3 + 2;
       var blockH = CLOCK_H + stackHeight(underCell - 1);
-      var EDGE_PAD = 6;  // mirrors the C: rows breathe off the panel edge
+      var EDGE_PAD = ROUND ? 18 : 6;  // mirrors the C: rows breathe off the panel edge
       var clockY = cfg.clockPos === 0
                    ? (blockH > CLOCK_H ? EDGE_PAD + (blockH - CLOCK_H) : 2)  // C: + TOP_GAP, no tuck
                  : cfg.clockPos === 1 ? (H - blockH) / 2
                  : H - blockH - EDGE_PAD;
+      // Rendered width of an element's text (zoom included), for the round rules.
+      function textWidth(el) {
+        if (!el || !el.textContent) { return 0; }
+        var r = document.createRange(); r.selectNodeContents(el);
+        return r.getBoundingClientRect().width;
+      }
+      var clockW = ROUND ? textWidth(clk) : 0;
+      if (ROUND && (cfg.clockPos || 0) === 0) {
+        // Mirrors the C: a top clock drops until its ink clears the edge pad
+        // and the circle holds its digits with room to spare.
+        while (clockY < H / 2 && (clockY + 8 < EDGE_PAD ||
+               W - 2 * roundInset(W, H, clockY + 8, clockY + 9) < clockW + 16)) { clockY++; }
+      }
       ovl.style.top = clockY + 'px';
 
       var bands = [[clockY, clockY + CLOCK_H]];
@@ -310,8 +335,27 @@
         } else if (row === 0) { y = EDGE_PAD; }
         else if (row === 1) { y = (H - textH) / 2; }
         else { y = H - textH - EDGE_PAD; }
-        c.style.top = y + 'px';
         var stack = c.firstChild;
+        if (ROUND && col !== 1 && row !== 1 && textH) {
+          // Mirrors the C: a side cell that doesn't fit beside its row's centre
+          // content (the clock digits, or the centre cell) moves inward.
+          var clockRow = row === (cfg.clockPos || 0);
+          var centreW = clockRow ? clockW : textWidth(cellEls[row * 3 + 1].firstChild);
+          var room = (W - centreW) / 2 - 8 - roundInset(W, H, y, y + textH + 4);
+          if (centreW && textWidth(stack) > room) {
+            if (clockRow) { y = row === 0 ? clockY + CLOCK_H - 4 : clockY - textH - 2; }
+            else { y += row === 0 ? textH + 4 : -(textH + 4); }
+          }
+        }
+        c.style.top = y + 'px';
+        if (ROUND) {
+          // Mirrors the C cell frame: the run box narrows to the circle's chord
+          // over its band, pulling side cells in from the corners.
+          var inset = roundInset(W, H, y, y + textH + 4);
+          stack.style.width = (W - 8 - 2 * inset) + 'px';
+          if (col === 0) { stack.style.left = (4 + inset) + 'px'; }
+          if (col === 2) { stack.style.right = (4 + inset) + 'px'; }
+        }
         stack.style.zoom = FS[size];
         stack.style.textAlign = col === 0 ? 'left' : col === 2 ? 'right' : 'center';
         stack.style.color = fg;

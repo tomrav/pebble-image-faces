@@ -124,3 +124,30 @@ test('photo-face: a pre-v2 page still replaces the uploads wholesale',()=>{
   save({galleries:[{id:'g',name:'G',enabled:true,end:'loop',items:['u:c']}],uploads:{c:'iVBORc'},cursor:{g:0,i:0}});
   same(p.s.cfg.uploads,{c:'iVBORc'});same(p.s.cfg.thumbs,{});
 });
+for (const file of ['src/faces/photo-face/src/pkjs/index.js','src/shared/franchise-face/pkjs.tmpl.js']) {
+  test(file+': Round 2 fetches the round cut, and a non-PNG answer never reaches the watch',()=>{
+    const p=phone(file);
+    const urls=[];
+    p.s.XMLHttpRequest=function(){p.requests.push(this);this.open=(m,u)=>urls.push(u);this.send=()=>{}};
+    p.s.Pebble.getActiveWatchInfo=()=>({platform:'gabbro'});
+    p.run(file.includes('photo-face')?"cfg.galleries=[{enabled:true,end:'next',items:['r:a','r:b']}];cfg.cursor={g:0,i:0};":"cfg.sel=['r:a','r:b'];cfg.cursor=0;");
+    p.run('onRequestIdx(0);');
+    assert.match(urls[0],/\/processed\/round\/a\.b64$/);
+    // Pages answers a missing file with 200 and its HTML fallback.
+    p.requests[0].status=200;p.requests[0].responseText=Buffer.from('<!DOCTYPE html><html></html>').toString('base64');p.requests[0].onload();
+    assert.equal(p.sent.filter(m=>m.IMG_TOTAL).length,0);
+    p.s.Pebble.getActiveWatchInfo=()=>({platform:'emery'});
+    p.run('onRequestIdx(1);');
+    assert.match(urls[1],/\/processed\/b\.b64$/);
+    p.requests[1].status=200;p.requests[1].responseText=Buffer.from([0x89,0x50,0x4e,0x47,13,10,26,10,0,0]).toString('base64');p.requests[1].onload();
+    assert.equal(p.sent.filter(m=>m.IMG_TOTAL).length,1);
+  });
+}
+test('franchise: a bundled image that left the bundle streams from the same place in the selection',()=>{
+  const p=phone('src/shared/franchise-face/pkjs.tmpl.js');
+  const saved={sel:['b:review-builtin','b:char/gone','r:char/x'],overrides:{'b:char/gone':{pos:1}}};
+  p.s.localStorage.getItem=(k)=>k==='cfg'?JSON.stringify(saved):null;
+  p.run('cfg=loadCfg();');
+  same(p.s.cfg.sel,['b:review-builtin','r:char/gone','r:char/x']);
+  same(p.s.cfg.overrides,{'r:char/gone':{pos:1}});
+});

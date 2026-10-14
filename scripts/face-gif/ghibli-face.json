@@ -7,5 +7,5 @@
 {"sel":["b:char/catbus"],"font":9,"fontAll":1,"fontSize":1,"clockPos":2,"timeFmt":1,"seconds":1,"bg":0,"color":0,"inkHex":"#FFFF55","grid":[{"k":"date","pos":2},{"k":"batt","pos":3}]},
 {"sel":["b:char/chihiro-ogino"],"font":5,"fontAll":1,"fontSize":1,"clockPos":1,"timeFmt":1,"seconds":0,"bg":0,"color":0,"grid":[{"k":"date","pos":8},{"k":"temp","pos":2},{"k":"cond","pos":2}]},
 {"sel":["b:char/howl"],"font":1,"fontAll":1,"fontSize":2,"clockPos":0,"timeFmt":1,"seconds":0,"bg":0,"color":0,"grid":[{"k":"date","pos":8},{"k":"batt","pos":9},{"k":"temp","pos":7}]},
-{"sel":["b:char/porco-rosso-character"],"font":8,"fontAll":1,"fontSize":1,"clockPos":2,"timeFmt":1,"seconds":0,"bg":0,"color":0,"inkHex":"#FFFFAA","grid":[{"k":"date","pos":8},{"k":"batt","pos":1}]}
+{"sel":["r:char/porco-rosso-character"],"font":8,"fontAll":1,"fontSize":1,"clockPos":2,"timeFmt":1,"seconds":0,"bg":0,"color":0,"inkHex":"#FFFFAA","grid":[{"k":"date","pos":8},{"k":"batt","pos":1}]}
 ]

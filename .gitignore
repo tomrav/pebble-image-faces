@@ -33,3 +33,6 @@ artifacts/
 
 # wrangler local state
 .wrangler/
+
+# Downloaded originals for the round image packs (scripts/import-round-art.py)
+media/.originals/

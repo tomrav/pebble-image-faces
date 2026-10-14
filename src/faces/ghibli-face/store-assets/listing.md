@@ -1,10 +1,12 @@
 # Ghibli Time — appstore listing
 
-Release prepared for 2026-09-28: 1.3.6; notes in `release-1.3.6.txt`.
+Release prepared for 2026-10-14: 1.4.0 (Pebble Round 2 support); notes in `release-1.4.0.txt`.
 
 Previously released: 1.3.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.3.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups). First submitted 2026-08-09; listed since 2026-09-06.
 Store requirements: screenshots exactly 200x228, banner exactly 720x320, icons 80x80 + 144x144.
+Round 2 (gabbro) screenshots, 260x260, are in `screenshots-round/`: emulator captures
+(`EMU=gabbro capture.sh`) composed with `compose.py --platform gabbro --scale 1`.
 Icons are set through Edit Listing, not the submit wizard.
 
 Assets in this directory: `app-icon-144.png`, `app-icon-80.png`,
@@ -41,6 +43,7 @@ The storybook settings page previews everything before you save.
 
 ## Release notes
 
+- 1.4.0 — Pebble Round 2 support: every image recut round from the originals, round settings preview, overlay kept inside the circle; Porco Rosso now streams instead of being bundled. See `release-1.4.0.txt`.
 - 1.3.6 — Failed phone saves are reported on the settings page instead of silently reverting. See `release-1.3.6.txt`.
 - 1.3.5 — Settings page moved to image-faces-config.pages.dev (the repo is public); empty-selection guard; weather credit and location note. See `release-1.3.5.txt`.
 - 1.3.4 — Reliable shake handling, cooperative cached-image loading, fewer storage writes, cache recovery, bounded retries, and settings validation. See `release-1.3.4.txt`.

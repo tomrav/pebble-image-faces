@@ -26,9 +26,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Permanent+Marker&family=Special+Elite&family=Monoton&family=Abril+Fatface&family=Black+Ops+One&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css">
-  <link rel="stylesheet" href="../../shared/theme.css?v=20260730a">
+  <link rel="stylesheet" href="../../shared/theme.css?v=20261013a">
   <link rel="stylesheet" href="../../shared/theme-glass.css?v=20260730a">
-  <link rel="stylesheet" href="../../shared/face-ui.css?v=20260901a">
+  <link rel="stylesheet" href="../../shared/face-ui.css?v=20261013a">
   <style>
     hgroup h1 { margin-bottom: var(--space-3); }
     h2 { font-size: 1.1rem; margin: var(--space-5) 0 var(--space-3); }
@@ -265,13 +265,15 @@
     <button id="save">Save</button>
   </main>
 
-  <script src="../../shared/pebble-image.js?v=20260928a"></script>
-  <script src="../../shared/face-config.js?v=20260901a"></script>
+  <script src="../../shared/pebble-image.js?v=20261013a"></script>
+  <script src="../../shared/face-config.js?v=20261014a"></script>
   <script>
     // Every image in the catalog: key ('b:group/slug' bundled, 'r:group/slug'
     // hosted), display name, group label, thumbnail URL.
     // >>>GEN:CATALOG>>>
     // <<<GEN:CATALOG<<<
+    // Pebble Round 2 (?platform=gabbro) has its own round cut of every image.
+    if (PebbleImage.ROUND) { CATALOG.forEach(function (c) { c.img = c.img.replace(/^img\//, 'img/round/'); }); }
 
     var byKey = {};
     CATALOG.forEach(function (c) { byKey[c.key] = c; });

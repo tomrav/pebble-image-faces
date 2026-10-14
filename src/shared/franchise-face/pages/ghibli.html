@@ -210,6 +210,7 @@
       box-shadow: 0 0 0 2px #5c3f26;
     }
     #watch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .pebble-round #watch { width: 260px; height: 260px; border-radius: 50%; }
     .curtain {
       position: absolute; top: 0; width: 68px; height: 122px; z-index: 3; pointer-events: none;
       filter: drop-shadow(2px 2px 4px rgba(20,14,6,.45));
@@ -272,6 +273,7 @@
       opacity: .55; filter: saturate(.3) brightness(1.06) contrast(.92) sepia(.14);
       transition: opacity .18s ease, filter .18s ease;
     }
+    .pebble-round .gallery img { aspect-ratio: 1; }
     .gallery .cell.on .frame {
       border-color: var(--moss);
       box-shadow: 0 0 0 3px rgba(124,171,92,.3), 0 3px 0 rgba(36,64,42,.28), 0 12px 18px -12px rgba(30,50,26,.8);
@@ -926,13 +928,15 @@
   </div>
 
   <p style="text-align:center">Choose up to 64 images. Up to 48 downloaded images fit offline, depending on size.</p>
-  <script src="../../shared/pebble-image.js?v=20260928a"></script>
-  <script src="../../shared/face-config.js?v=20260901a"></script>
+  <script src="../../shared/pebble-image.js?v=20261013a"></script>
+  <script src="../../shared/face-config.js?v=20261014a"></script>
   <script>
     // Every image in the catalog: key ('b:group/slug' bundled, 'r:group/slug'
     // hosted), display name, group label, thumbnail URL.
     // >>>GEN:CATALOG>>>
     // <<<GEN:CATALOG<<<
+    // Pebble Round 2 (?platform=gabbro) has its own round cut of every image.
+    if (PebbleImage.ROUND) { CATALOG.forEach(function (c) { c.img = c.img.replace(/^img\//, 'img/round/'); }); }
 
     var byKey = {};
     CATALOG.forEach(function (c) { byKey[c.key] = c; });

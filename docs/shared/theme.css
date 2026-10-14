@@ -25,6 +25,12 @@
   --button-radius: 999px;                             /* pill buttons */
 }
 
+/* Pebble Round 2 (?platform=gabbro): square, circular thumbnails. */
+.pebble-round {
+  --thumb-ratio: 1;
+  --thumb-radius: 50%;
+}
+
 /* Rounded (pill) buttons — Pico's default is the small --pico-border-radius. */
 button, input[type="submit"], input[type="button"], input[type="reset"], [role="button"] {
   border-radius: var(--button-radius);

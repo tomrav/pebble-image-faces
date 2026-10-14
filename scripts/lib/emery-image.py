@@ -1,4 +1,4 @@
-# Shared Emery (Pebble Time 2) image converter — THE single place watch images
+# Shared Pebble image converter (Time 2 / emery, Round 2 / gabbro) — THE single place watch images
 # are quantized. Used by scripts/gen-franchise-faces.mjs and
 # scripts/gen-photo-face.mjs; its browser twin is docs/shared/pebble-image.js
 # (uploads must land on the same look as bundled images — keep them in sync).
@@ -7,10 +7,12 @@
 #   [{ "src": "path/in.jpg",
 #      "focus": [0.5, 0.35],        # optional: crop centre as x,y fractions
 #                                   #   (default 0.5, 0.5); see cover_crop()
+#      "shape": "round",            # optional: "rect" (emery 200x228, default)
+#                                   #   or "round" (gabbro 260x260, see SHAPES)
 #      "png":   "out.png",          # optional: watch-ready PNG
 #      "b64":   "out.b64",          # optional: base64 PNG for streaming (32KB cap)
 #      "thumb": "out.png",          # optional: settings-page thumbnail
-#      "dests": ["a.png", "b.png"]  # optional: extra PNG copies
+#      "dests": ["a.png", "b.png"]  # optional: extra watch-ready copies (PNG; strip pack for round)
 #   }, ...]
 #
 # stdout contract (parsed by the generators — do not add chatter):
@@ -18,7 +20,7 @@
 #   DONE <n> images converted, <m> dropped as un-streamable
 # Everything informational goes to stderr.
 #
-# Emery's palette is FIXED: 2 bits/channel, so every channel is 0/85/170/255.
+# Both platforms share the palette, and it is FIXED: 2 bits/channel, so every channel is 0/85/170/255.
 # Quantizing to an adaptive palette makes the watch remap a second time with no
 # dithering — that double quantization shifts colors and bands gradients.
 #
@@ -32,16 +34,27 @@
 # Downscaling happens in LINEAR light — averaging gamma-encoded pixels darkens
 # edges before the dither ever sees them.
 #
-# Sources are COVER-CROPPED to the screen's 200:228 aspect before scaling, never
+# Sources are COVER-CROPPED to the screen's aspect (200:228, or square) before scaling, never
 # stretched: the first photo library shipped 2:3 portraits squeezed straight to
 # 200x228 and users saw them ~30% wider than life ("the photos look stretched
 # horizontally"). The browser twin (uploads) crops the same way in its default
 # mode, so bundled, streamed and uploaded images all agree.
+#
+# Round images are painted black outside the inscribed circle: gabbro never
+# shows those pixels, and flat black there costs almost nothing in the PNG, which
+# keeps 260x260 under the same 32KB stream cap as 200x228.
+#
+# Round images go to the watch (b64, dests) as a STRIP PACK: one PNG per band
+# of STRIP_ROWS rows, back to back. Gabbro can't hold a whole 260x260 bitmap
+# next to its PNG, so it decodes one strip at a time into a 6-bit canvas (see
+# src/shared/image-face/face-image.h). Each strip keeps its exact colours; the
+# settings-page previews (png, thumb) stay ordinary PNGs.
 import sys, json, base64, io
 import numpy as np
 from PIL import Image, ImageOps
 
-TARGET = (200, 228)
+SHAPES = {'rect': (200, 228), 'round': (260, 260)}
+STRIP_ROWS = 26
 STREAM_CAP = 32768
 DAMP = 0.82
 DEADZONE = 12.0
@@ -65,13 +78,13 @@ def resize_linear(im, size):
     return lin_to_srgb(np.stack(chans, axis=2))
 
 
-def cover_crop(im, focus):
-    """Largest TARGET-aspect window of im, centred on focus=(fx, fy) fractions
+def cover_crop(im, focus, target):
+    """Largest target-aspect window of im, centred on focus=(fx, fy) fractions
     and clamped inside the image. Same result as CSS object-fit: cover with
     object-position fx fy — the settings-page thumbnails use exactly that, so
     what the page previews is what the watch gets."""
     w, h = im.size
-    tw, th = TARGET
+    tw, th = target
     if w * th > h * tw:      # wider than the screen: trim the sides
         cw, ch = (h * tw) // th, h
     else:                    # taller: trim top/bottom
@@ -82,6 +95,14 @@ def cover_crop(im, focus):
     x = max(0, min(w - cw, x))
     y = max(0, min(h - ch, y))
     return im.crop((x, y, x + cw, y + ch))
+
+
+def round_mask(size):
+    """True for pixels outside the circle inscribed in a size[0] x size[1] screen."""
+    w, h = size
+    ys, xs = np.mgrid[0:h, 0:w]
+    r = min(w, h) / 2.0
+    return (xs + 0.5 - w / 2.0) ** 2 + (ys + 0.5 - h / 2.0) ** 2 > r * r
 
 
 def on_palette(arr):
@@ -123,36 +144,63 @@ def encode(arr, colors=64):
     return buf.getvalue()
 
 
+def reduce_colors(arr, colors):
+    """arr limited to `colors` of its own colours, as a plain RGB array."""
+    p = Image.fromarray(arr).convert('P', dither=Image.Dither.NONE,
+                                     palette=Image.Palette.ADAPTIVE, colors=colors)
+    return np.asarray(p.convert('RGB'), dtype=np.uint8)
+
+
+def encode_pack(arr, colors=64):
+    if colors < 64:
+        arr = reduce_colors(arr, colors)
+    return b''.join(encode(arr[y:y + STRIP_ROWS]) for y in range(0, arr.shape[0], STRIP_ROWS))
+
+
 jobs = json.load(sys.stdin)
 dropped = 0
 for j in jobs:
+    shape = j.get('shape', 'rect')
+    target = SHAPES[shape]
     im = ImageOps.exif_transpose(Image.open(j['src']).convert('RGB'))
-    if im.size == TARGET:
+    if im.size == target:
         arr = np.asarray(im, dtype=np.uint8)
     else:
         focus = j.get('focus') or (0.5, 0.5)
-        im = cover_crop(im, (float(focus[0]), float(focus[1])))
-        arr = resize_linear(im, TARGET)
+        im = cover_crop(im, (float(focus[0]), float(focus[1])), target)
+        arr = resize_linear(im, target)
+    outside = round_mask(target) if shape == 'round' else None
+    if outside is not None:
+        arr = arr.copy()
+        arr[outside] = 0
     if not on_palette(arr):
         arr = dither(arr)
     else:
         arr = arr.astype(np.uint8)
+    if outside is not None:
+        # The dither pushes error across the edge; scrub it back to black.
+        arr[outside] = 0
 
     data = encode(arr)
-    for dest in [j.get('png')] + list(j.get('dests', [])) + [j.get('thumb')]:
+    watch = encode_pack if shape == 'round' else encode
+    watch_data = encode_pack(arr) if shape == 'round' else data
+    for dest in [j.get('png'), j.get('thumb')]:
         if dest:
             with open(dest, 'wb') as f:
                 f.write(data)
+    for dest in j.get('dests', []):
+        with open(dest, 'wb') as f:
+            f.write(watch_data)
 
     if 'b64' in j:
-        b64_data = data
+        b64_data = watch_data
         # Streamed copies must fit the watch's transfer cap. Reduce the palette
         # (no re-dither — dither noise is what defeats PNG compression) before
         # giving up; bundled flash copies above are exempt and stay full-quality.
         for colors in (32, 16):
             if len(b64_data) <= STREAM_CAP:
                 break
-            b64_data = encode(arr, colors=colors)
+            b64_data = watch(arr, colors=colors)
             print('NOTE: %s requantized to %d colors for streaming (%d bytes)'
                   % (j['src'], colors, len(b64_data)), file=sys.stderr)
         if len(b64_data) > STREAM_CAP:

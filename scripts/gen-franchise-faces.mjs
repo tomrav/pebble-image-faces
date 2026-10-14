@@ -9,14 +9,17 @@ import { syncFaceRuntime } from './lib/face-runtime.mjs';
 //     wscript, src/c/main.c                  copies of the template (+ GEN region)
 //     src/pkjs/index.js                      from pkjs.tmpl.js (+ BUILTINS region)
 //     resources/images/builtin-*.png         palettized 200x228, from epaper/
+//     resources/images/builtin-*-round.pack  the same for gabbro (strip packs)
 //   docs/faces/<id>/                         the hosted side (GENERATED)
 //     config.html                            from config.tmpl.html (+ CATALOG)
 //     img/<group>/<slug>.png                 thumbnails for the settings page
 //     processed/<group>/<slug>.b64           watch-ready PNGs the phone streams
+//     img/round/…, processed/round/…         the same for Pebble Round 2
 //
 // Image conversion (palettize + base64) shells out to python3/Pillow — the
 // same stack the image packs were made with. Sources come from media/epaper/
-// (already 200x228, dithered to the Pebble 64-color palette).
+// (already 200x228, dithered to the Pebble 64-color palette); the Round 2 cuts
+// come from media/epaper-round/ (260x260, made by npm run pebble:import-round-art).
 //
 // Re-run after changing the template, franchises.json, or the image packs:
 //   npm run pebble:gen-faces
@@ -29,6 +32,7 @@ const tplDir = path.join(root, 'src', 'shared', 'franchise-face');
 // Image packs: 200x228 PNGs already dithered to the Pebble 64-color palette, in
 // media/epaper/<id>[_media|_artwork]/. PEBBLE_MEDIA overrides the location.
 const mediaRoot = path.resolve(process.env.PEBBLE_MEDIA || path.join(root, 'media', 'epaper'));
+const roundRoot = path.resolve(process.env.PEBBLE_MEDIA_ROUND || path.join(root, 'media', 'epaper-round'));
 const facesRoot = path.join(root, 'src', 'faces');
 const docsRoot = path.join(root, 'docs', 'faces');
 
@@ -102,7 +106,12 @@ for (const face of faces) {
         console.error(`${face.id}: duplicate slug after sanitizing: ${ref}`);
         process.exit(1);
       }
-      catalog.push({ ref, group: g.label, name: titleCase(slug), src: path.join(dir, f) });
+      const roundSrc = path.join(roundRoot, face.id + g.suffix, f);
+      if (!existsSync(roundSrc)) {
+        console.error(`${face.id}: no Round 2 cut ${roundSrc} (run: npm run pebble:import-round-art)`);
+        process.exit(1);
+      }
+      catalog.push({ ref, group: g.label, name: titleCase(slug), src: path.join(dir, f), roundSrc });
     }
   }
 
@@ -153,7 +162,7 @@ for (const face of faces) {
   const pkg = {
     name: face.project,
     author: 'case',
-    version: '1.3.6',  // failed phone saves are reported, not swallowed
+    version: '1.4.0',  // Pebble Round 2 support
     keywords: ['pebble-watchface'],
     private: true,
     dependencies: {},
@@ -179,7 +188,7 @@ for (const face of faces) {
         'CACHE_ACK', 'IMG_PREFETCH', 'SEL_IDS', 'CACHE_FULL',
         'SEL_GROUPS', 'S_SHUFFLE', 'CURSOR_IDX', 'REQUEST_IDX', 'OV_SET', 'NEED_IMAGE', 'IMG_SEQ', 'IMG_OFFSET'
       ],
-      targetPlatforms: ['emery'],
+      targetPlatforms: ['emery', 'gabbro'],
       watchapp: { watchface: true },
       resources: {
         media: [
@@ -222,11 +231,12 @@ for (const face of faces) {
           { type: 'font', name: 'FONT_POSTER_20', file: 'fonts/AbrilFatface-Regular.ttf', characterRegex: '[ -~·°]' },
           { type: 'font', name: 'FONT_STENCIL_12', file: 'fonts/BlackOpsOne-Regular.ttf', characterRegex: '[ -~·°]' },
           { type: 'font', name: 'FONT_STENCIL_18', file: 'fonts/BlackOpsOne-Regular.ttf', characterRegex: '[ -~·°]' },
-          ...bundled.map((r) => ({
-            type: 'png',
-            name: resourceName(r),
-            file: `images/builtin-${r.replace('/', '-')}.png`
-          }))
+          // Each bundled image is two rows under one name: the PNG for emery,
+          // the strip pack for gabbro (see src/shared/image-face/face-image.h).
+          ...bundled.flatMap((r) => [
+            { type: 'png', name: resourceName(r), file: `images/builtin-${r.replace('/', '-')}.png`, targetPlatforms: ['emery'] },
+            { type: 'raw', name: resourceName(r), file: `images/builtin-${r.replace('/', '-')}-round.pack`, targetPlatforms: ['gabbro'] },
+          ])
         ]
       }
     }
@@ -238,20 +248,25 @@ for (const face of faces) {
   rmSync(path.join(faceDocs, 'img'), { recursive: true, force: true });
   rmSync(path.join(faceDocs, 'processed'), { recursive: true, force: true });
   for (const g of GROUPS) {
-    mkdirSync(path.join(faceDocs, 'img', g.key), { recursive: true });
-    mkdirSync(path.join(faceDocs, 'processed', g.key), { recursive: true });
+    for (const sub of ['', 'round']) {
+      mkdirSync(path.join(faceDocs, 'img', sub, g.key), { recursive: true });
+      mkdirSync(path.join(faceDocs, 'processed', sub, g.key), { recursive: true });
+    }
   }
 
   // --- Image jobs (config.html is written after conversion, which may drop
   // streamed images that can't fit the watch's 32KB transfer cap) -----------
   for (const c of catalog) {
     const job = { src: c.src, thumb: path.join(faceDocs, 'img', c.ref + '.png') };
+    const round = { src: c.roundSrc, shape: 'round', thumb: path.join(faceDocs, 'img', 'round', c.ref + '.png') };
     if (bundled.includes(c.ref)) {
       job.png = path.join(imgDir, `builtin-${c.ref.replace('/', '-')}.png`);
+      round.dests = [path.join(imgDir, `builtin-${c.ref.replace('/', '-')}-round.pack`)];
     } else {
       job.b64 = path.join(faceDocs, 'processed', c.ref + '.b64');
+      round.b64 = path.join(faceDocs, 'processed', 'round', c.ref + '.b64');
     }
-    pyJobs.push(job);
+    pyJobs.push(job, round);
   }
 
   // Per-franchise settings-page override: full custom page design lives in
@@ -279,7 +294,8 @@ for (const line of pyOut.trim().split('\n')) {
 
 // --- Settings pages, excluding any dropped streamed images -------------------
 for (const { face, faceDocs, catalog, bundled, pageTpl } of faceOutputs) {
-  const usable = catalog.filter((c) => !droppedSrcs.has(c.src));
+  // An image either shape can't stream leaves the catalog for both.
+  const usable = catalog.filter((c) => !droppedSrcs.has(c.src) && !droppedSrcs.has(c.roundSrc));
   if (usable.length < catalog.length) {
     console.log(`${face.project}: ${catalog.length - usable.length} un-streamable image(s) dropped from the catalog`);
   }

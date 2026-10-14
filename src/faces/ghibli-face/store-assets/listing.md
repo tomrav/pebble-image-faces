@@ -1,6 +1,6 @@
 # Ghibli Time — appstore listing
 
-Release prepared for 2026-10-14: 1.4.0 (Pebble Round 2 support); notes in `release-1.4.0.txt`.
+Released 2026-10-14: 1.4.0 (Pebble Round 2 support); notes in `release-1.4.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
 
 Previously released: 1.3.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.3.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups). First submitted 2026-08-09; listed since 2026-09-06.

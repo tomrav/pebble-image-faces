@@ -20,9 +20,9 @@ Regenerate icons/banner with `python3 make-assets.py`.
 
 Photo Face
 
-## Description (live since 1.0.10; bulleted rewrite 2026-08-09; user-photos framing + cropper + on-watch selection 2026-09-18)
+## Description (live since 1.0.10; bulleted rewrite 2026-08-09; user-photos framing + cropper + on-watch selection 2026-09-18; Round 2 lines 2026-10-14)
 
-Photo Face turns your Pebble Time 2 into a photo frame with a clock, filled with your own photos.
+Photo Face turns your Pebble Time 2 or Pebble Round 2 into a photo frame with a clock, filled with your own photos.
 
 Your photos:
 - Add as many as you like from the settings page and arrange them into galleries you create
@@ -44,6 +44,7 @@ Looks:
 - Any of the watch's 64 colors for the text and the backdrop bar
 - 12h or 24h, optional seconds
 - Per-photo overrides: single photos can have their own clock position and colors
+- Made for both screens: photos are cut separately for Pebble Time 2's rectangle and Pebble Round 2's circle, and the clock stays inside the circle
 
 The settings page previews everything before you save.
 

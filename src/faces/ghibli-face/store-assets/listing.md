@@ -22,6 +22,7 @@ Ghibli Time
 ## Description (1.1.0)
 
 Studio Ghibli's friends, films and paintings drift past your wrist.
+For Pebble Time 2 and Pebble Round 2, with every image cut from the original art for each screen.
 
 The collection:
 - 67 images: 44 characters, film posters, official key art

@@ -139,6 +139,8 @@
     }
     #savebar.dirty { transform: translateY(0); }
     #savebar #status { margin: 0; }
+    /* Buttons keep their label width; the status text wraps instead. */
+    #savebar #save, #savebar #discard { flex: none; }
     #savebar #save { margin: 0; width: auto; min-width: 0; padding: .45rem 1.4rem; font-size: .85rem; white-space: nowrap; }
     #savebar #discard {
       margin: 0; width: auto; padding: .45rem .9rem; font-size: .85rem;

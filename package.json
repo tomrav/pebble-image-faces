@@ -1,7 +1,7 @@
 {
   "name": "pebble-image-faces",
   "private": true,
-  "description": "Photo Face and Ghibli Time: image watchfaces for Pebble Time 2, sharing one C engine and phone transport",
+  "description": "Photo Face and Ghibli Time: image watchfaces for Pebble Time 2 and Pebble Round 2, sharing one C engine and phone transport",
   "license": "MIT",
   "scripts": {
     "pebble:list": "node scripts/pebble-project.mjs list",

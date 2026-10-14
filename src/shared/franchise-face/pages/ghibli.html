@@ -785,7 +785,7 @@
         <div class="seg c3" id="bg" role="radiogroup" aria-label="Backdrop"></div>
       </div>
       <div class="field" id="barrow">
-        <span class="cap">Bar colour</span>
+        <span class="cap">Bar color</span>
         <div class="wellrow" id="barwells"></div>
       </div>
     </section>
@@ -903,7 +903,7 @@
 
     <div id="palpop" role="dialog" aria-modal="true">
       <div class="card">
-        <h3 id="paltitle">Pick a colour</h3>
+        <h3 id="paltitle">Pick a color</h3>
         <div class="grid" id="palgrid"></div>
         <div class="foot"><button type="button" id="palcancel">Cancel</button></div>
       </div>
@@ -1237,13 +1237,13 @@
     }
     function inkHex() { return cfg.inkHex || (cfg.color === 1 ? '#000000' : '#ffffff'); }
     var inkWell = document.createElement('button');
-    inkWell.type = 'button'; inkWell.className = 'well'; inkWell.title = 'Ink colour';
+    inkWell.type = 'button'; inkWell.className = 'well'; inkWell.title = 'Ink color';
     var inkHint = document.createElement('span');
-    inkHint.className = 'wellhint'; inkHint.textContent = 'tap to choose · 64 colours';
+    inkHint.className = 'wellhint'; inkHint.textContent = 'tap to choose · 64 colors';
     $('inkwells').appendChild(inkWell); $('inkwells').appendChild(inkHint);
     function paintInk() { inkWell.style.background = inkHex(); }
     inkWell.addEventListener('click', function () {
-      openPalette('Ink · 64 Pebble colours', inkHex(), function (hex) {
+      openPalette('Ink · 64 Pebble colors', inkHex(), function (hex) {
         if (hex === '#ffffff' || hex === '#000000') { delete cfg.inkHex; }
         else { cfg.inkHex = hex; }
         cfg.color = lum(hex) >= 0.5 ? 0 : 1;
@@ -1254,9 +1254,9 @@
     // --- Bar colour: AUTO keeps the inverse-of-ink; a well overrides. -------
     var autoBtn = document.createElement('button');
     autoBtn.type = 'button'; autoBtn.className = 'autochip'; autoBtn.textContent = 'AUTO';
-    autoBtn.title = 'Inverse of the ink colour';
+    autoBtn.title = 'Inverse of the ink color';
     var barWell = document.createElement('button');
-    barWell.type = 'button'; barWell.className = 'well'; barWell.title = 'Bar colour';
+    barWell.type = 'button'; barWell.className = 'well'; barWell.title = 'Bar color';
     $('barwells').appendChild(autoBtn); $('barwells').appendChild(barWell);
     $('barwells').style.display = 'flex';
     function paintBar() {
@@ -1265,7 +1265,7 @@
     }
     autoBtn.addEventListener('click', function () { delete cfg.barHex; updatePreview(); });
     barWell.addEventListener('click', function () {
-      openPalette('Bar · 64 Pebble colours', cfg.barHex || '', function (hex) {
+      openPalette('Bar · 64 Pebble colors', cfg.barHex || '', function (hex) {
         cfg.barHex = hex; updatePreview();
       });
     });
@@ -1361,7 +1361,7 @@
       bWell.type = 'button'; bWell.className = 'well';
       bWell.style.background = o.bar || (cfg.barHex || (lum(inkHex()) >= 0.5 ? '#000000' : '#ffffff'));
       bWell.addEventListener('click', function () {
-        openPalette('This image · bar colour', o.bar || cfg.barHex || '', function (hex) {
+        openPalette('This image · bar color', o.bar || cfg.barHex || '', function (hex) {
           setOv(ref, { bar: hex }); renderGroups();
         });
       });

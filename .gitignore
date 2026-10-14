@@ -36,3 +36,6 @@ artifacts/
 
 # Downloaded originals for the round image packs (scripts/import-round-art.py)
 media/.originals/
+
+# Python bytecode caches
+__pycache__/

@@ -1,0 +1,4 @@
+Every photo loads again.
+
+- Fixes a watch that kept returning to the same few photos: it could not make room for the others once its memory got fragmented. The watch now reserves the room for incoming photos when the face starts
+- Nothing to do on your side: the missing photos copy over by themselves after the update

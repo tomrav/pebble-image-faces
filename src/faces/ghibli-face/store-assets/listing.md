@@ -1,6 +1,6 @@
 # Ghibli Time — appstore listing
 
-Released 2026-10-14: 1.5.0 (dithering against the measured panel colors; settings site published first); notes in `release-1.5.0.txt`. Previously: Released 2026-10-14: 1.4.0 (Pebble Round 2 support); notes in `release-1.4.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
+Released 2026-10-15: 1.5.1 (image arena: images load on a fragmented heap; no settings-site change); notes in `release-1.5.1.txt`. Previously: Released 2026-10-14: 1.5.0 (dithering against the measured panel colors; settings site published first); notes in `release-1.5.0.txt`. Released 2026-10-14: 1.4.0 (Pebble Round 2 support); notes in `release-1.4.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
 
 Previously released: 1.3.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.3.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups). First submitted 2026-08-09; listed since 2026-09-06.
@@ -44,6 +44,7 @@ The storybook settings page previews everything before you save.
 
 ## Release notes
 
+- 1.5.1 — One image buffer reserved at launch for transfers, cache reads and slot writes, so a fragmented heap can no longer refuse every image not yet on the watch (found on Photo Face 1.3.0; same runtime). See `release-1.5.1.txt`.
 - 1.5.0 — All art recut from the originals and dithered against the colors the panel really shows; refreshes on the watch by itself. See `release-1.5.0.txt`.
 - 1.4.0 — Pebble Round 2 support: every image recut round from the originals, round settings preview, overlay kept inside the circle; Porco Rosso now streams instead of being bundled. See `release-1.4.0.txt`.
 - 1.3.6 — Failed phone saves are reported on the settings page instead of silently reverting. See `release-1.3.6.txt`.

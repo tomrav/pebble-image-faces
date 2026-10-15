@@ -162,7 +162,7 @@ for (const face of faces) {
   const pkg = {
     name: face.project,
     author: 'case',
-    version: '1.5.0',  // dithered against the measured panel colours
+    version: '1.5.1',  // image arena: transfers survive a fragmented heap
     keywords: ['pebble-watchface'],
     private: true,
     dependencies: {},

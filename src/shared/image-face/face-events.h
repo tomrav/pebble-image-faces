@@ -434,18 +434,19 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
       return;
     }
     if (is_prefetch) {
-      // A prefetch must never cost the face its picture: the incoming PNG, the
-      // bitmap on screen and (soon) the decoder all share one heap. Refuse
-      // early — the phone drops this image from the round rather than waiting.
-      uint32_t heap = heap_bytes_free();
+      // Refuse early — the phone drops this image from the round rather than
+      // waiting. The arena is the prefetch's only memory need: it goes from
+      // there straight to flash, never through the decoder.
       if (!s_slot_ready || !s_alloc_ready) {
         APP_LOG(APP_LOG_LEVEL_INFO, "Refusing prefetch %08x: cache unavailable", (unsigned int)id);
         reply_id(MESSAGE_KEY_CACHE_FULL, id);
         return;
       }
-      if (heap < IMG_CACHE_MIN_HEAP) {
-        APP_LOG(APP_LOG_LEVEL_WARNING, "Refusing prefetch %08x: heap free=%u below %d",
-                (unsigned int)id, (unsigned int)heap, IMG_CACHE_MIN_HEAP);
+      if (s_cache_buf) {
+        // The previous image is still draining into flash from the arena.
+        // The phone waits for its CACHE_ACK before the next prefetch, so this
+        // is a stale or duplicate IMG_TOTAL; it retries next round.
+        APP_LOG(APP_LOG_LEVEL_INFO, "Refusing prefetch %08x: slot write in progress", (unsigned int)id);
         reply_id(MESSAGE_KEY_CACHE_FULL, id);
         return;
       }
@@ -456,12 +457,14 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
         reply_id(MESSAGE_KEY_CACHE_FULL, id);
         return;
       }
-      APP_LOG(APP_LOG_LEVEL_INFO, "Prefetch %08x begin: %u bytes; heap free=%u before malloc",
-              (unsigned int)id, (unsigned int)size, (unsigned int)heap);
+      APP_LOG(APP_LOG_LEVEL_INFO, "Prefetch %08x begin: %u bytes; heap free=%u",
+              (unsigned int)id, (unsigned int)size, (unsigned int)heap_bytes_free());
     }
-    s_img_buf = malloc(size);
+    s_img_buf = img_arena_take();
     if (!s_img_buf) {
-      APP_LOG(APP_LOG_LEVEL_ERROR, "malloc %u failed (heap free=%u)",
+      // Only if launch could not allocate the arena at all; the resets above
+      // released any transfer, read or write that could hold it.
+      APP_LOG(APP_LOG_LEVEL_ERROR, "No image buffer for %u bytes (heap free=%u)",
               (unsigned int)size, (unsigned int)heap_bytes_free());
       if (is_prefetch) { reply_id(MESSAGE_KEY_CACHE_FULL, id); }
       return;
@@ -474,7 +477,7 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     s_img_prefetch = is_prefetch;
     s_img_ov = ov_word;
     img_transfer_bump_timer();
-    APP_LOG(APP_LOG_LEVEL_INFO, "Transfer begin: %u bytes, id=%08x%s; heap free=%u after malloc",
+    APP_LOG(APP_LOG_LEVEL_INFO, "Transfer begin: %u bytes, id=%08x%s; heap free=%u",
             (unsigned int)size, (unsigned int)id, is_prefetch ? " (prefetch)" : "",
             (unsigned int)heap_bytes_free());
   }
@@ -506,8 +509,9 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     if (s_img_received >= s_img_total) {
       APP_LOG(APP_LOG_LEVEL_INFO, "Transfer complete: %u bytes", (unsigned int)s_img_total);
 
-      // Take the PNG out of the transfer state: it outlives the decode as the
-      // on-watch cache copy (img_slot_begin_write owns it from here).
+      // Take the PNG (the arena) out of the transfer state: it outlives the
+      // decode as the on-watch cache copy (img_slot_begin_write owns it from
+      // here). Nothing between here and that call takes the arena.
       uint8_t *png = s_img_buf;
       uint32_t png_len = s_img_total;
       uint32_t png_id = s_img_id;
@@ -527,12 +531,11 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
         return;
       }
 
-      if (s_phone_selection && png_id != s_desired_id) { free(png); return; }
+      if (s_phone_selection && png_id != s_desired_id) { return; }
       // image_show_png() frees the shown image before decoding, so the old
       // bitmap and the PNG decoder never peak together.
       if (!image_show_png(png, png_len)) {
         APP_LOG(APP_LOG_LEVEL_ERROR, "PNG decode failed (unsupported format or low memory)");
-        free(png);
         set_loading(false);
         return;
       }
@@ -672,6 +675,13 @@ static void load_selection(void) {
 static void init(void) {
   time_t t_sec; uint16_t t_ms; time_ms(&t_sec, &t_ms);
   uint32_t t_init = (uint32_t)t_sec * 1000u + t_ms;
+
+  // The image arena, before anything else carves up the heap (face-transfer.h).
+  s_img_arena = malloc(MAX_IMAGE_BYTES);
+  if (!s_img_arena) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Image arena malloc %d failed (heap free=%u); images cannot load",
+            MAX_IMAGE_BYTES, (unsigned int)heap_bytes_free());
+  }
 
   // The ONE lookup allowed to miss (see PERSIST_KEY_STATE). Absent = first run
   // of this build: probe the legacy keys and scan the headers, then write every

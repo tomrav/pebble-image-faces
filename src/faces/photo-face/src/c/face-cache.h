@@ -25,7 +25,6 @@
 #define IMG_CACHE_REC       PERSIST_DATA_MAX_LENGTH
 #define IMG_CACHE_MIN_QUOTA (64 * 1024)
 #define IMG_CACHE_HEADROOM  (4 * 1024)   // never fill the quota to the brim
-#define IMG_CACHE_MIN_HEAP  (40 * 1024)  // below this, a prefetch is refused
 #define IMG_CACHE_RECS_PER_TICK 1  // yield after each synchronous flash write
 
 // 16 bytes. flags carries this image's packed per-image overrides (see
@@ -110,6 +109,12 @@ static int s_read_slot = -1, s_read_idx = -1;
 static uint32_t s_read_id, s_read_len, s_read_hash, s_read_off, s_read_flags;
 static uint32_t s_read_started, s_read_header_ms, s_read_io_ms;
 static bool s_read_header, s_read_ack, s_read_override;
+
+// The image arena (face-transfer.h) if no transfer, read or write holds it.
+static uint8_t *img_arena_take(void) {
+  if (!s_img_arena || s_img_buf || s_read_buf || s_cache_buf) { return NULL; }
+  return s_img_arena;
+}
 static void cache_read_cancel(void);
 static void cache_read_complete(bool ok, uint32_t id, uint32_t flags, int idx, bool ack);
 
@@ -359,7 +364,7 @@ static void img_slot_free(int slot) {
 static void img_slot_abort_write(void) {
   if (s_cache_timer) { app_timer_cancel(s_cache_timer); s_cache_timer = NULL; }
   if (s_cache_slot >= 0 && !s_slot[s_cache_slot].len) { cache_gc_schedule(s_cache_slot); }
-  if (s_cache_buf) { free(s_cache_buf); s_cache_buf = NULL; }
+  s_cache_buf = NULL;  // releases the arena
   s_cache_len = s_cache_written = 0;
   s_cache_flags = 0;
   s_cache_slot = -1;
@@ -437,20 +442,20 @@ static void img_slot_write_tick(void *data) {
 // ack = the phone is blocked on CACHE_ACK before it sends the next prefetch.
 // ov = the image's packed per-image overrides, stored in the slot header so a
 // later local show applies the right look without asking the phone.
+// png is the arena, released by every early return simply by not taking it.
 static void img_slot_begin_write(uint8_t *png, uint32_t len, uint32_t id, bool ack, uint32_t ov) {
   img_slot_abort_write();
-  if (len == 0 || len > MAX_IMAGE_BYTES || !s_slot_ready) { free(png); return; }
+  if (len == 0 || len > MAX_IMAGE_BYTES || !s_slot_ready) { return; }
   // Image IDs are immutable. An existing committed copy needs no rewrite.
   int old_slot = img_slot_find(id);
-  if (id != ID_NONE && old_slot >= 0) { free(png); if (ack) { reply_id(MESSAGE_KEY_CACHE_ACK, id); } return; }
+  if (id != ID_NONE && old_slot >= 0) { if (ack) { reply_id(MESSAGE_KEY_CACHE_ACK, id); } return; }
   if (old_slot >= 0) {
     img_slot_free(old_slot);  // legacy ID zero names different bytes each time
-    if (s_slot[old_slot].len) { free(png); if (ack) { reply_id(MESSAGE_KEY_CACHE_FULL, id); } return; }
+    if (s_slot[old_slot].len) { if (ack) { reply_id(MESSAGE_KEY_CACHE_FULL, id); } return; }
     s_active_slot = -1; state_dirty();
   }
   int slot = img_slot_reserve(id, len);
   if (slot < 0) {
-    free(png);
     if (ack) { reply_id(MESSAGE_KEY_CACHE_FULL, id); }
     return;
   }
@@ -469,7 +474,7 @@ static void img_slot_begin_write(uint8_t *png, uint32_t len, uint32_t id, bool a
 // old bitmap remains visible until the separate decoder callback.
 static void cache_read_cancel(void) {
   if (s_read_timer) { app_timer_cancel(s_read_timer); s_read_timer = NULL; }
-  free(s_read_buf); s_read_buf = NULL;
+  s_read_buf = NULL;  // releases the arena
   s_read_slot = s_read_idx = -1;
   s_read_ack = s_read_override = false;
 }
@@ -538,7 +543,7 @@ static bool cache_read_start(int slot, uint32_t id, uint32_t len, uint32_t hash,
                              uint32_t flags, bool header) {
   cache_read_cancel();
   if (slot < 0 || slot >= SLOT_COUNT || !len || len > MAX_IMAGE_BYTES) { return false; }
-  s_read_buf = malloc(len);
+  s_read_buf = img_arena_take();
   if (!s_read_buf) { return false; }
   s_read_slot = slot; s_read_id = id; s_read_len = len; s_read_hash = hash;
   s_read_flags = flags; s_read_header = header; s_read_off = 0;

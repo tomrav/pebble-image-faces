@@ -8,6 +8,17 @@ static bool s_last_streamed;
 // Incoming chunked image transfer (same wire protocol as touch-glass).
 #define MAX_IMAGE_BYTES 32768
 #define IMG_TRANSFER_TIMEOUT_MS 5000
+// One buffer for every image on the move: an incoming transfer, a cached read
+// or a slot write. Allocated once at launch and never freed. Allocating per
+// image let the heap fragment around the last one (fonts, message buffers and
+// the storage index land in its hole), until a Time 2 with the LCD clock and
+// every data point had 45KB free and no 28KB block: every request for a
+// photo not yet on the watch failed, and so did every prefetch, leaving the
+// face cycling the few photos it held (2026-10-15). One owner at a time
+// (s_img_buf, s_read_buf or s_cache_buf); the owners already serialise each
+// other: a display cancels reads and writes, a prefetch is refused while
+// anything is in flight.
+static uint8_t *s_img_arena;
 static uint8_t *s_img_buf;
 static uint32_t s_img_total;
 static uint32_t s_img_received;
@@ -27,10 +38,7 @@ static void img_transfer_reset(void) {
     app_timer_cancel(s_img_timer);
     s_img_timer = NULL;
   }
-  if (s_img_buf) {
-    free(s_img_buf);
-    s_img_buf = NULL;
-  }
+  s_img_buf = NULL;  // releases the arena; nothing to free
   s_img_total = 0;
   s_img_received = 0;
   s_img_id = 0;

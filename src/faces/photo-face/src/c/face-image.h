@@ -164,6 +164,11 @@ static void image_layers_create(Layer *root, GRect bounds) {
   layer_add_child(root, bitmap_layer_get_layer(s_image_layer));
 #if defined(PBL_ROUND)
   canvas_init_rows();
+  // Allocate the canvas now, before any PNG buffer exists, and keep it. Made
+  // lazily, it landed above the first image's PNG buffer, and that buffer's
+  // hole split the free heap in two: 50KB free, no 30KB block for the next
+  // streamed image.
+  s_canvas = malloc(canvas_bytes());
   s_canvas_layer = layer_create(bounds);
   layer_set_update_proc(s_canvas_layer, canvas_update_proc);
   layer_add_child(root, s_canvas_layer);

@@ -9,6 +9,8 @@ static int storage_ms,storage_ops,journal_writes;
 static void time_ms(time_t*s,uint16_t*m){*s=storage_ms/1000;*m=storage_ms%1000;}
 #define PERSIST_DATA_MAX_LENGTH 256
 #define MAX_IMAGE_BYTES 32768
+// The launch-allocated image arena (face-transfer.h): the one buffer transfers, reads and slot writes share.
+static uint8_t s_img_arena_store[MAX_IMAGE_BYTES];static uint8_t *s_img_arena=s_img_arena_store,*s_img_buf;
 #define BUILTIN_COUNT 5
 #define BUILTIN_OV_MAX 20
 #define PERSIST_KEY_IDX_IDS 71

@@ -36,7 +36,7 @@ test('state writes wait for idle and exit preserves settings without saving play
  const src=read('tests/image-face/cache-mocks.h')+`
 #define FLUSH_MS ${delay}
 static bool s_state_dirty,s_index_dirty,s_bov_dirty,s_settings_dirty;
-static void*s_read_buf,*s_img_buf;static bool s_img_prefetch;static int s_requested_idx=-1;
+static void*s_read_buf;static bool s_img_prefetch;static int s_requested_idx=-1;
 static AppTimer*s_flush_timer;static int flushes;
 static void state_flush_now(void){flushes++;s_state_dirty=s_settings_dirty=s_bov_dirty=false;}
 `+fn(file,'flush_timer_cb')+'\n'+fn(file,'schedule_flush')+'\n'+fn(file,'state_dirty')+'\n'+fn(file,'state_flush_on_exit')+`

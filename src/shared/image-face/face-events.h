@@ -627,16 +627,35 @@ static void window_load(Window *window) {
       state_dirty();
     }
   }
+  // The slow path needs the slot index and the selection: without them a
+  // cached photo is invisible, and the launch painted the built-in instead
+  // (field report, 2026-10-15: "the lion shows before my photo"). Loading
+  // them here costs a few lookups, only when the fast path could not paint.
+  if (!shown && s_last_streamed) { ensure_loaded(); }
   if (shown) {
     // painted
   } else if (s_last_streamed && show_slot(s_active_id)) {
     APP_LOG(APP_LOG_LEVEL_INFO, "Launch: id=%08x straight from flash", (unsigned int)s_active_id);
-  } else if (s_last_streamed && connection_service_peek_pebble_app_connection()) {
-    // Not on the watch and the phone is there: ask for it by cursor position
-    // right now. The outbox may not be up yet this early — harmless, the
-    // phone's connect handshake asks NEED_IMAGE and covers exactly this.
+  } else if (s_last_streamed && s_sel_n > 0) {
+    // Not on the watch. With a selection, a built-in is never the right
+    // picture: ask the phone for the cursor's image and hold the plain
+    // backdrop under the clock; the outbox may not be up yet this early —
+    // harmless, the phone's connect handshake asks NEED_IMAGE and covers
+    // exactly this. Offline, or if the phone never answers (restore_builtin),
+    // the nearest selected image the watch does hold stands in.
     s_need_image = true;
-    if (s_sel_n > 0 && s_sel_pos >= 0) { request_idx(s_sel_pos); }
+    if (connection_service_peek_pebble_app_connection() && s_sel_pos >= 0) {
+      request_idx(s_sel_pos);
+      cancel_fallback();
+      s_fallback_timer = app_timer_register(FALLBACK_MS, restore_builtin, NULL);
+    } else if (!skip_to_next_available(s_sel_pos)) {
+      cancel_fallback();
+      s_fallback_timer = app_timer_register(FALLBACK_MS, restore_builtin, NULL);
+    }
+  } else if (s_last_streamed && connection_service_peek_pebble_app_connection()) {
+    // No selection on the watch (a phone JS older than 1.1.0): wait for its
+    // re-send, then fall back to the saved built-in.
+    s_need_image = true;
     cancel_fallback();
     s_fallback_timer = app_timer_register(FALLBACK_MS, restore_builtin, NULL);
   } else {

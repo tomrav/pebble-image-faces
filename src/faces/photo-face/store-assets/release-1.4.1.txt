@@ -1,0 +1,3 @@
+No more wrong photo at launch.
+
+- Switching to Photo Face no longer flashes an example photo before yours: the face shows your photo, or a plain backdrop under the clock until the phone sends it

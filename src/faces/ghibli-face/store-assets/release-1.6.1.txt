@@ -1,0 +1,3 @@
+No more wrong image at launch.
+
+- Switching to Ghibli Time no longer flashes Totoro before your selection: the face shows one of your images, or a plain backdrop under the clock until the phone sends it

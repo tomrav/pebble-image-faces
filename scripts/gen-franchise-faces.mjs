@@ -174,7 +174,7 @@ for (const face of faces) {
   const pkg = {
     name: face.project,
     author: 'case',
-    version: '1.6.0',  // one bundled image; the rest of the default set streams
+    version: '1.6.1',  // launch never paints a built-in over a selection
     keywords: ['pebble-watchface'],
     private: true,
     dependencies: {},

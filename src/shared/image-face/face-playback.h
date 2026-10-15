@@ -520,6 +520,14 @@ static void restore_builtin(void *data) {
     s_fallback_timer = app_timer_register(FALLBACK_MS, restore_builtin, NULL);
     return;
   }
+  if (s_sel_n > 0) {
+    // With a selection, the nearest selected image on the watch beats a
+    // built-in nobody chose; nothing cached keeps the backdrop (local_advance
+    // never shows an unselected built-in as an advance).
+    APP_LOG(APP_LOG_LEVEL_INFO, "No streamed image from the phone; showing a selected image from flash");
+    local_advance(NULL);
+    return;
+  }
   APP_LOG(APP_LOG_LEVEL_INFO, "No streamed image from the phone; showing saved built-in");
   show_builtin(s_current_image);
 }

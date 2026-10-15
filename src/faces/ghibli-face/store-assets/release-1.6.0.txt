@@ -1,0 +1,4 @@
+Smaller, faster install.
+
+- Only Totoro ships inside the watchface now; the rest of the starting set arrives from your phone like every other image, and stays on the watch
+- Your selection and settings carry over unchanged

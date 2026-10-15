@@ -1,5 +1,5 @@
 {
-  "comment": "One entry per published face. `bundled` refs are <group>/<slug> where group is char|media|art (mapping to media/epaper/<id>, <id>_media, <id>_artwork). Keep bundled sets to ~8 images (~15KB each in the .pbw). UUIDs are permanent once published — never change one.",
+  "comment": "One entry per published face. `bundled` refs are <group>/<slug> where group is char|media|art (mapping to media/epaper/<id>, <id>_media, <id>_artwork); they ship in the .pbw and show before the phone has sent anything, so keep the set to one or two (~15KB each). `defaultSel` is a fresh install's selection, bundled or streamed. UUIDs are permanent once published \u2014 never change one.",
   "faces": [
     {
       "id": "ghibli",
@@ -7,6 +7,9 @@
       "displayName": "Ghibli Time",
       "uuid": "f3a41c3e-68f6-40c1-a96a-40f12ad75c16",
       "bundled": [
+        "char/totoro"
+      ],
+      "defaultSel": [
         "char/totoro",
         "char/no-face",
         "char/calcifer",

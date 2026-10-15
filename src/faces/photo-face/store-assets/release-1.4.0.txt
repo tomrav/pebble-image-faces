@@ -1,0 +1,4 @@
+Smaller, faster install.
+
+- Only one example photo ships inside the watchface now; the other examples arrive from your phone like your own photos do, and stay on the watch
+- Your galleries and settings carry over unchanged

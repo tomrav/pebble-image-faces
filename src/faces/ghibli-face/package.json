@@ -1,7 +1,7 @@
 {
   "name": "ghibli-face",
   "author": "case",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "keywords": [
     "pebble-watchface"
   ],
@@ -308,118 +308,6 @@
           "type": "raw",
           "name": "IMAGE_B_CHAR_TOTORO",
           "file": "images/builtin-char-totoro-round.pack",
-          "targetPlatforms": [
-            "gabbro"
-          ]
-        },
-        {
-          "type": "png",
-          "name": "IMAGE_B_CHAR_NO_FACE",
-          "file": "images/builtin-char-no-face.png",
-          "targetPlatforms": [
-            "emery"
-          ]
-        },
-        {
-          "type": "raw",
-          "name": "IMAGE_B_CHAR_NO_FACE",
-          "file": "images/builtin-char-no-face-round.pack",
-          "targetPlatforms": [
-            "gabbro"
-          ]
-        },
-        {
-          "type": "png",
-          "name": "IMAGE_B_CHAR_CALCIFER",
-          "file": "images/builtin-char-calcifer.png",
-          "targetPlatforms": [
-            "emery"
-          ]
-        },
-        {
-          "type": "raw",
-          "name": "IMAGE_B_CHAR_CALCIFER",
-          "file": "images/builtin-char-calcifer-round.pack",
-          "targetPlatforms": [
-            "gabbro"
-          ]
-        },
-        {
-          "type": "png",
-          "name": "IMAGE_B_CHAR_KIKI",
-          "file": "images/builtin-char-kiki.png",
-          "targetPlatforms": [
-            "emery"
-          ]
-        },
-        {
-          "type": "raw",
-          "name": "IMAGE_B_CHAR_KIKI",
-          "file": "images/builtin-char-kiki-round.pack",
-          "targetPlatforms": [
-            "gabbro"
-          ]
-        },
-        {
-          "type": "png",
-          "name": "IMAGE_B_CHAR_PONYO",
-          "file": "images/builtin-char-ponyo.png",
-          "targetPlatforms": [
-            "emery"
-          ]
-        },
-        {
-          "type": "raw",
-          "name": "IMAGE_B_CHAR_PONYO",
-          "file": "images/builtin-char-ponyo-round.pack",
-          "targetPlatforms": [
-            "gabbro"
-          ]
-        },
-        {
-          "type": "png",
-          "name": "IMAGE_B_CHAR_CATBUS",
-          "file": "images/builtin-char-catbus.png",
-          "targetPlatforms": [
-            "emery"
-          ]
-        },
-        {
-          "type": "raw",
-          "name": "IMAGE_B_CHAR_CATBUS",
-          "file": "images/builtin-char-catbus-round.pack",
-          "targetPlatforms": [
-            "gabbro"
-          ]
-        },
-        {
-          "type": "png",
-          "name": "IMAGE_B_CHAR_CHIHIRO_OGINO",
-          "file": "images/builtin-char-chihiro-ogino.png",
-          "targetPlatforms": [
-            "emery"
-          ]
-        },
-        {
-          "type": "raw",
-          "name": "IMAGE_B_CHAR_CHIHIRO_OGINO",
-          "file": "images/builtin-char-chihiro-ogino-round.pack",
-          "targetPlatforms": [
-            "gabbro"
-          ]
-        },
-        {
-          "type": "png",
-          "name": "IMAGE_B_CHAR_HOWL",
-          "file": "images/builtin-char-howl.png",
-          "targetPlatforms": [
-            "emery"
-          ]
-        },
-        {
-          "type": "raw",
-          "name": "IMAGE_B_CHAR_HOWL",
-          "file": "images/builtin-char-howl-round.pack",
           "targetPlatforms": [
             "gabbro"
           ]

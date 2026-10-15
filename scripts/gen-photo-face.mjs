@@ -4,8 +4,8 @@ import { syncFaceRuntime } from './lib/face-runtime.mjs';
 //
 // The library is larger than the watch's flash budget, so it splits — the same
 // hybrid the franchise faces use:
-//   BUNDLED   the FIRST image of each category ships in the .pbw (offline
-//             fallback rotation; instant, no phone)
+//   BUNDLED   images marked `bundled` in library.json ship in the .pbw (the
+//             first-run picture; instant, no phone). One since 1.4.0.
 //   STREAMED  everything else is hosted; the phone fetches
 //             processed/<name>.b64 and chunk-streams it to the watch
 //
@@ -60,8 +60,11 @@ if (!existsSync(manifestPath)) {
 }
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
-// --- Convert: everything gets a preview PNG + streamable b64; the first image
-// of each category additionally becomes a bundled flash resource. ------------
+// --- Convert: everything gets a preview PNG + streamable b64; an image marked
+// `bundled` in library.json additionally becomes a flash resource. Since 1.4.0
+// that is one image (the first-run picture): every selected photo is cached on
+// the watch after the first connect anyway, and each bundled one adds ~15KB
+// to the install. ------------------------------------------------------------
 rmSync(processedDir, { recursive: true, force: true });
 mkdirSync(roundDir, { recursive: true });
 mkdirSync(resDir, { recursive: true });
@@ -89,7 +92,7 @@ for (const cat of manifest.categories) {
       b64: path.join(roundDir, `${im.file}.b64`),
     };
     if (im.focus) { job.focus = im.focus; round.focus = im.focus; }
-    if (i === 0) {
+    if (im.bundled) {
       job.dests = [path.join(resDir, `builtin-${im.file}.png`)];
       round.dests = [path.join(resDir, `builtin-${im.file}-round.pack`)];
       bundled.push(im.file);
@@ -145,8 +148,8 @@ const pkjsPath = path.join(faceDir, 'src', 'pkjs', 'index.js');
 const pkjsLit = 'var BUILTINS = [\n  '
   + bundled.map((n) => `'${n}'`).join(', ')
   + '\n];\n'
-  + '// Every image in the library, category slug -> ordered names. First of each\n'
-  + '// category is bundled (see BUILTINS); the rest stream from Pages.\n'
+  + '// Every image in the library, category slug -> ordered names. Those in\n'
+  + '// BUILTINS are bundled (library.json `bundled`); the rest stream from Pages.\n'
   + 'var LIBRARY = {\n'
   + catalog.map((cat) => `  ${cat.slug}: [${cat.images.map((im) => `'${im.file}'`).join(', ')}]`).join(',\n')
   + '\n};\n'

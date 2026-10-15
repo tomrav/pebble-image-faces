@@ -5,7 +5,7 @@ static int s_current_image = 0;
 static bool s_last_streamed;
 
 // Incoming chunked image transfer (same wire protocol as touch-glass).
-#define MAX_IMAGE_BYTES 32768
+// MAX_IMAGE_BYTES lives in face-state.h: face-image.h needs it first.
 #define IMG_TRANSFER_TIMEOUT_MS 5000
 // One buffer for every image on the move: an incoming transfer, a cached read
 // or a slot write. Allocated once at launch and never freed. Allocating per

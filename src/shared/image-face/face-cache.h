@@ -632,7 +632,8 @@ static void show_builtin(int index) {
     return;
   }
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "Showing built-in %d/%d from flash", index + 1, (int)BUILTIN_COUNT);
+  APP_LOG(APP_LOG_LEVEL_INFO, "Showing built-in %d/%d from flash; heap free=%u",
+          index + 1, (int)BUILTIN_COUNT, (unsigned int)heap_bytes_free());
   set_loading(false);
 
   s_current_image = index;

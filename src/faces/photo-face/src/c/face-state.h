@@ -1,5 +1,8 @@
 // GENERATED from src/shared/image-face/face-state.h. Do not edit this copy.
 // Shared Photo Face / franchise engine. Included by face-engine.h in dependency order.
+// Largest image the watch accepts, on the wire and in storage (128 records of
+// 256 bytes). The image arena (face-transfer.h) is exactly this big.
+#define MAX_IMAGE_BYTES 32768
 // Persistent-storage keys.
 #define PERSIST_KEY_ACTIVE_IMAGE 1
 #define PERSIST_KEY_ROTATE_MIN   2

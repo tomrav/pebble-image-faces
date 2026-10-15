@@ -48,7 +48,10 @@ never freed; every transfer, cached read and slot write uses it, one owner at a
 time (`img_arena_take`). Per-image malloc let the heap fragment around the last
 image until a Time 2 with the LCD clock and every data point had 45 KB free and no
 28 KB block: every image not on the watch failed to load (Photo Face 1.3.1).
-On Round 2 the 6-bit canvas is likewise allocated with the layers, not on first use.
+On Round 2 the 6-bit canvas is likewise allocated with the layers, not on first use,
+and a bundled image is loaded into the arena too: beside the arena and the canvas
+a separate copy left the SDK's PNG decoder so little heap that it faulted at the
+first paint (Ghibli Time 1.5.1 on a fresh Round 2 install; never store-released).
 
 Cached image reads now use one storage operation per timer callback, including
 the header. The previous picture remains visible until a separate decode callback;

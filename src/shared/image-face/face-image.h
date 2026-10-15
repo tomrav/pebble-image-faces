@@ -12,6 +12,9 @@
 // layer copies the canvas into the frame buffer. Anything else (a 200x228
 // image from before Round 2) still takes the plain bitmap path.
 
+// The image arena, defined with the cache (face-cache.h) which comes later.
+static uint8_t *img_arena_take(void);
+
 #if defined(PBL_ROUND)
 #define CANVAS_SIZE PBL_DISPLAY_WIDTH  // square panel
 
@@ -235,7 +238,12 @@ static bool image_show_resource(uint32_t resource_id) {
 #if defined(PBL_ROUND)
   ResHandle h = resource_get_handle(resource_id);
   size_t n = resource_size(h);
-  uint8_t *buf = malloc(n);
+  // Into the image arena (face-transfer.h): with it and the canvas reserved,
+  // the heap has no room left for a separate copy (26KB failed with 22KB
+  // free on a fresh install). show_builtin() has just released every other
+  // owner; a pack over the arena's size (none bundled) falls back to malloc.
+  uint8_t *arena = (n <= MAX_IMAGE_BYTES) ? img_arena_take() : NULL;
+  uint8_t *buf = arena ? arena : malloc(n);
   if (!buf) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Built-in malloc %u failed (heap free=%u)",
             (unsigned int)n, (unsigned int)heap_bytes_free());
@@ -243,7 +251,7 @@ static bool image_show_resource(uint32_t resource_id) {
   }
   resource_load(h, buf, n);
   bool ok = image_show_png(buf, n);
-  free(buf);
+  if (!arena) { free(buf); }
   return ok;
 #else
   image_drop_bitmap();

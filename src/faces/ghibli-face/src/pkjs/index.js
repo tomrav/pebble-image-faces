@@ -45,6 +45,10 @@ function processedBase() {
 // >>>GEN:GALLERY>>>
 var BUILTINS = [
   'char/totoro',
+];
+// A fresh install's selection (franchises.json defaultSel): bundled or streamed.
+var DEFAULT_SEL = [
+  'char/totoro',
   'char/no-face',
   'char/calcifer',
   'char/kiki',
@@ -85,7 +89,10 @@ function isPng(bytes) {
 // --- Config (persisted) --------------------------------------------------
 function defaultCfg() {
   return {
-    sel: BUILTINS.map(function (k) { return 'b:' + k; }),  // bundled set by default
+    // DEFAULT_SEL is generated beside BUILTINS; whatever of it is bundled rides
+    // as 'b:', the rest streams ('r:') and is cached on the watch after the
+    // first connect.
+    sel: DEFAULT_SEL.map(function (k) { return (BUILTINS.indexOf(k) >= 0 ? 'b:' : 'r:') + k; }),
     shuffle: false,
     rotateMin: 30,
     shake: true,

@@ -1,6 +1,6 @@
 # Photo Face — appstore listing
 
-Released 2026-10-15: 1.3.1 (image arena: photos load on a fragmented heap; no settings-site change); notes in `release-1.3.1.txt`. Previously: Released 2026-10-14: 1.3.0 (dithering against the measured panel colors; settings site published first); notes in `release-1.3.0.txt`. Released 2026-10-14: 1.2.0 (Pebble Round 2 support); notes in `release-1.2.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
+Released 2026-10-15: 1.4.0 (one bundled photo, space-1; the install drops ~76 KB on Time 2 and ~98 KB on Round 2; settings site republished for the page's bundled flags); notes in `release-1.4.0.txt`. 1.3.1 (image arena: photos load on a fragmented heap) was built and installed on Tom's Time 2 the same day but NOT store-released: on a fresh Round 2 install its bundled image could not load beside the arena and the canvas (and the PNG decoder faults when the heap is that short); 1.4.0 loads bundled images through the arena. Notes in `release-1.3.1.txt`. Released 2026-10-14: 1.3.0 (dithering against the measured panel colors; settings site published first); notes in `release-1.3.0.txt`. Released 2026-10-14: 1.2.0 (Pebble Round 2 support); notes in `release-1.2.0.txt`. Round 2 screenshots uploaded through Edit Listing (Pebble Round 2 tab, exactly 260x260) the same day.
 
 Previously released: 1.1.1 (faster launch: paints from the boot record, index deferred), published 2026-09-04 right after 1.1.0 (whole-selection
 on-watch cache, watch-first advance, persist speedups, multi-file upload on the
@@ -50,6 +50,7 @@ The settings page previews everything before you save.
 
 ## Release notes history (latest first; 1.0.2's note was reworded 2026-08-08)
 
+- 1.4.0 — One bundled photo (space-1, marked `bundled` in library.json) instead of the first of each category; the other four stream and cache like everything else, and saved galleries remap their refs on load. See `release-1.4.0.txt`.
 - 1.3.1 — One image buffer reserved at launch for transfers, cache reads and slot writes. A Time 2 with the LCD clock and every data point had 45 KB free but no 28 KB block after a relaunch, so every photo not yet on the watch failed to load and the face cycled the few it held. See `release-1.3.1.txt`.
 - 1.3.0 — Photos dithered against the colors the panel really shows (measured), sharper; library refreshes on the watch by itself; "Refresh photos" for uploads (crop saved with each new upload). See `release-1.3.0.txt`.
 - 1.2.0 — Pebble Round 2 support: round 260x260 photos in all 64 colors, round settings preview and crop, overlay kept inside the circle. See `release-1.2.0.txt`.

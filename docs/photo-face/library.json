@@ -32,7 +32,8 @@
       "images": [
         {
           "file": "space-1",
-          "title": "The Moon"
+          "title": "The Moon",
+          "bundled": true
         },
         {
           "file": "space-2",

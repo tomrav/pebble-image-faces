@@ -4,10 +4,10 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const {create} = require('../../src/shared/image-face/image-transfer.js');
-function phone(file) {
+function phone(file, stored) {
   let now=0, next=0;
   const timers=new Map(), sent=[], requests=[], handlers={};
-  const s={BUILTINS:['review-builtin'],console:{log(){}},require(){return {create}},localStorage:{getItem(){return null},setItem(){}},
+  const s={BUILTINS:['review-builtin'],DEFAULT_SEL:['review-builtin'],console:{log(){}},require(){return {create}},localStorage:{getItem(k){return k==='cfg'&&stored?stored:null},setItem(){}},
     Pebble:{addEventListener(n,f){handlers[n]=f},sendAppMessage(m){sent.push(m)},openURL(){}},
     setTimeout(fn,ms){timers.set(++next,{fn,at:now+ms});return next},clearTimeout(id){timers.delete(id)},
     setInterval(){},clearInterval(){},navigator:{},XMLHttpRequest:function(){requests.push(this);this.open=()=>{};this.send=()=>{}}};
@@ -169,3 +169,14 @@ for (const file of ['src/faces/photo-face/src/pkjs/index.js','src/shared/franchi
     assert.notEqual(r,rOld);assert.equal(u,uOld);assert.ok(r>=0x80000000);
   });
 }
+test('a bundled image that leaves the bundle keeps its place as a streamed ref, in both gallery models',()=>{
+ // Photo Face 1.4.0 bundles space-1 only; a 1.3.x config still names the old five as 'b:'.
+ const saved={galleries:[{id:'g',name:'G',enabled:true,end:'next',items:['b:animals-1','b:space-1','r:space-2']}],uploads:{},thumbs:{},cursor:{g:0,i:0}};
+ const p=phone('src/faces/photo-face/src/pkjs/index.js',JSON.stringify(saved));
+ assert.equal(JSON.stringify(p.s.cfg.galleries[0].items),JSON.stringify(['r:animals-1','b:space-1','r:space-2']));
+ const g=phone('src/shared/franchise-face/pkjs.tmpl.js',JSON.stringify({sel:['b:review-builtin','b:char/kiki'],overrides:{'b:char/kiki':{ink:'#ffffff'}},cursor:0}));
+ assert.equal(JSON.stringify(g.s.cfg.sel),JSON.stringify(['b:review-builtin','r:char/kiki']));assert.ok(g.s.cfg.overrides['r:char/kiki']);
+ // A fresh franchise install selects DEFAULT_SEL, not just what is bundled.
+ const f=phone('src/shared/franchise-face/pkjs.tmpl.js');f.s.DEFAULT_SEL.push('char/x');
+ f.run('var __sel=defaultCfg().sel');assert.equal(JSON.stringify(f.s.__sel),JSON.stringify(['b:review-builtin','r:char/x']));
+});

@@ -152,8 +152,20 @@ for (const face of faces) {
   let pkjs = pkjsTpl
     .replaceAll('__FACE_ID__', face.id)
     .replaceAll('__FACE_TITLE__', face.displayName);
+  // A fresh install's selection: the bundled set unless franchises.json names
+  // one (`defaultSel`), so a face can ship one image yet start with several.
+  const defaultSel = face.defaultSel || bundled;
+  for (const ref of defaultSel) {
+    if (!catalog.some((c) => c.ref === ref)) {
+      console.error(`${face.id}: defaultSel ref '${ref}' not found in media repo`);
+      process.exit(1);
+    }
+  }
   const builtinsLit = `var BUILTINS = [\n` +
-    bundled.map((r) => `  '${r}',`).join('\n') + `\n];`;
+    bundled.map((r) => `  '${r}',`).join('\n') + `\n];\n` +
+    `// A fresh install's selection (franchises.json defaultSel): bundled or streamed.\n` +
+    `var DEFAULT_SEL = [\n` +
+    defaultSel.map((r) => `  '${r}',`).join('\n') + `\n];`;
   pkjs = replaceRegion(pkjs, START, END, builtinsLit, 'pkjs');
   writeFileSync(path.join(projDir, 'src', 'pkjs', 'index.js'), pkjs);
   syncFaceRuntime(projDir);
@@ -162,7 +174,7 @@ for (const face of faces) {
   const pkg = {
     name: face.project,
     author: 'case',
-    version: '1.5.1',  // image arena: transfers survive a fragmented heap
+    version: '1.6.0',  // one bundled image; the rest of the default set streams
     keywords: ['pebble-watchface'],
     private: true,
     dependencies: {},

@@ -76,10 +76,10 @@ function processedBase() {
 // IMG_BUILTIN carries an index into it.
 // >>>GEN:GALLERY>>>
 var BUILTINS = [
-  'animals-1', 'space-1', 'architecture-1', 'transport-1', 'flora-1'
+  'space-1'
 ];
-// Every image in the library, category slug -> ordered names. First of each
-// category is bundled (see BUILTINS); the rest stream from Pages.
+// Every image in the library, category slug -> ordered names. Those in
+// BUILTINS are bundled (library.json `bundled`); the rest stream from Pages.
 var LIBRARY = {
   animals: ['animals-1', 'animals-2', 'animals-3', 'animals-4', 'animals-5'],
   space: ['space-1', 'space-2', 'space-3'],

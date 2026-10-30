@@ -627,6 +627,10 @@
     }
 
     var expanded = null; // gallery index whose "Add photos" picker is open
+    // The settings page only ever runs inside the Pebble phone app (or the SDK's
+    // desktop config server), so the platform token is enough to tell the Android
+    // webview apart; see the picker note in pickerPanel().
+    var ANDROID_APP = /Android/i.test(navigator.userAgent);
 
     // Resolve an item ref to a thumbnail URL + label.
     function refThumb(ref) {
@@ -1034,9 +1038,15 @@
       // panel, above the built-in library.
       var up = document.createElement('label');
       up.className = 'upload';
-      up.textContent = 'Upload your own photos';
+      up.textContent = ANDROID_APP ? 'Upload a photo' : 'Upload your own photos';
       var file = document.createElement('input'); file.type = 'file'; file.accept = 'image/*';
-      file.multiple = true;
+      // One file at a time inside the Android Pebble app. It hands the picker
+      // result to WebChromeClient.FileChooserParams.parseResult, which reads only
+      // Intent.getData() and ignores the ClipData a multi-selection comes back
+      // as: pick two or more photos and the page receives nothing, with no error
+      // (coredevices/mobileapp WatchappSettingsScreen.android.kt; Chromium
+      // AwContentsClient.parseFileChooserResult). Single picks work.
+      file.multiple = !ANDROID_APP;
       up.appendChild(file);
       file.addEventListener('change', function (e) {
         handleUploads(gi, e.target.files);
@@ -1048,7 +1058,8 @@
       p.appendChild(hint);
 
       var h = document.createElement('small');
-      h.textContent = 'Or tap a library photo to add it (\u25cf = stored on the watch, shows offline):';
+      h.textContent = (ANDROID_APP ? 'One photo per pick on Android; add more the same way. ' : '') +
+        'Or tap a library photo to add it (\u25cf = stored on the watch, shows offline):';
       p.appendChild(h);
       CATS.forEach(function (c) {
         var cap = document.createElement('h4'); cap.className = 'pickcat'; cap.textContent = c.name;

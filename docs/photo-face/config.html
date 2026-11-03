@@ -88,13 +88,7 @@
     }
     .upload:hover { filter: brightness(1.1); }
     .upload:focus-within { box-shadow: 0 0 0 var(--pico-outline-width) var(--pico-primary-focus); }
-    /* Android's second, optional picker (several photos): outline, not filled,
-       so the one-photo button stays the obvious choice. */
     .picker > small { display: block; margin-bottom: var(--space-2); }
-    .upload.several {
-      margin-top: 0; font-weight: 500;
-      color: var(--pico-primary); background: transparent;
-    }
     .upload input[type=file] {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0 0 0 0); border: 0;
@@ -634,10 +628,6 @@
     }
 
     var expanded = null; // gallery index whose "Add photos" picker is open
-    // The settings page only ever runs inside the Pebble phone app (or the SDK's
-    // desktop config server), so the platform token is enough to tell the Android
-    // webview apart; see the picker note in pickerPanel().
-    var ANDROID_APP = /Android/i.test(navigator.userAgent);
 
     // Resolve an item ref to a thumbnail URL + label.
     function refThumb(ref) {
@@ -937,8 +927,7 @@
     }
     function pickRefresh() {
       var input = document.createElement('input');
-      input.type = 'file'; input.accept = 'image/*';
-      input.multiple = !ANDROID_APP;  // older Android apps lose every multi-pick; see pickerPanel()
+      input.type = 'file'; input.accept = 'image/*'; input.multiple = true;
       input.style.position = 'fixed'; input.style.left = '-9999px';
       input.addEventListener('change', function () {
         var files = Array.prototype.slice.call(input.files || []);
@@ -1046,38 +1035,19 @@
       // panel, above the built-in library.
       var up = document.createElement('label');
       up.className = 'upload';
-      up.textContent = ANDROID_APP ? 'Upload a photo' : 'Upload your own photos';
+      up.textContent = 'Upload your own photos';
       var file = document.createElement('input'); file.type = 'file'; file.accept = 'image/*';
-      // One file at a time inside the Android Pebble app, with several as a
-      // separate opt-in. Before 1.16.0 the app handed the picker result to
-      // WebChromeClient.FileChooserParams.parseResult, which reads only
-      // Intent.getData() and ignores ClipData; asking for multiple loses every
-      // pick, even a single photo (seen on Tom's phone, 2026-10-30). 1.16.0
-      // reads ClipData (coredevices/mobileapp#452). The webview's user agent
-      // carries no app version, so the default must work on older apps.
-      file.multiple = !ANDROID_APP;
+      // Several at a time everywhere. Pebble Android apps before 1.16.0 lose
+      // every pick, even a single photo, when the page asks for several (they
+      // read only Intent.getData(), not the ClipData a multi-pick returns;
+      // fixed in coredevices/mobileapp#452).
+      file.multiple = true;
       up.appendChild(file);
-      function onPick(e) {
+      file.addEventListener('change', function (e) {
         handleUploads(gi, e.target.files);
         e.target.value = '';  // picking the same files again must fire change again
-      }
-      file.addEventListener('change', onPick);
+      });
       p.appendChild(up);
-      if (ANDROID_APP) {
-        var several = document.createElement('label');
-        several.className = 'upload several';
-        several.textContent = 'Pick several photos';
-        var many = document.createElement('input'); many.type = 'file'; many.accept = 'image/*';
-        many.multiple = true;
-        several.appendChild(many);
-        many.addEventListener('change', onPick);
-        // An older app hands back nothing, which the webview reports as a cancel.
-        many.addEventListener('cancel', function () {
-          statusEl.textContent = 'No photos came back. Picking several needs Pebble app 1.16 or newer; ' +
-            '\u201cUpload a photo\u201d works on any version.';
-        });
-        p.appendChild(several);
-      }
       var hint = document.createElement('small');
       hint.textContent = 'Each photo opens in a cropper: drag and zoom to choose what the watch shows, or add it as is.';
       p.appendChild(hint);

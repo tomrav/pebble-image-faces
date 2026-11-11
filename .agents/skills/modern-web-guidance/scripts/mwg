@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Modern Web Guidance (Chrome, Edge, Firefox, MDN; Apache-2.0) for devbox projects.
+# Runs one pinned, integrity-checked copy of the `modern-web-guidance` npm CLI with telemetry
+# off, inside Node's permission model: no network, no child processes, reads limited to the
+# CLI, the current directory and the temp directory, writes only to the temp directory.
+# Source: ~/projects/devbox/config/skills/modern-web-guidance. To change the pin, follow
+# UPDATING.md there; never edit a project's copy.
+set -euo pipefail
+
+VERSION=1.0.0
+INTEGRITY='sha512-vafIZwC8AS6QjM2yyoflZbnc7n3/TVOMLbEMRdPTwcFy0f9/Tq8s5rJQ8UIqRt2KPl9ixravyaMR4nTGuUrcmg=='
+
+root="${MWG_HOME:-$HOME/.local/share/devbox/modern-web-guidance}"
+dir="$root/$VERSION"
+cli="$dir/package/skills/modern-web-guidance/modern-web.mjs"
+
+die() { echo "mwg: $*" >&2; exit 1; }
+
+usage() {
+  cat <<EOF
+usage: mwg search "<2-5 word query>"     find guides (JSON: id, description, tokenCount)
+       mwg retrieve <id>[,<id>...]        print the guides
+       mwg list                           all guide ids
+       mwg legacy-scan <path> --json      only when asked to modernise a whole codebase
+       mwg fetch                          download and verify the pinned CLI ($VERSION)
+       mwg check                          show the pin and prove telemetry stays off
+EOF
+}
+
+# Download the pinned tarball from the npm registry, check it against INTEGRITY, unpack it.
+fetch() {
+  [[ -f "$cli" ]] && return 0
+  local tmp got
+  tmp=$(mktemp -d "${TMPDIR:-/tmp}/mwg-fetch.XXXXXX")
+  curl -fsSL --retry 2 -o "$tmp/pkg.tgz" \
+    "https://registry.npmjs.org/modern-web-guidance/-/modern-web-guidance-$VERSION.tgz" \
+    || { rm -rf "$tmp"; die "download failed (no network? run 'mwg fetch' where the network is allowed)"; }
+  got="sha512-$(openssl dgst -sha512 -binary "$tmp/pkg.tgz" | openssl base64 -A)"
+  [[ "$got" == "$INTEGRITY" ]] || { rm -rf "$tmp"; die "integrity mismatch for $VERSION ($got); nothing installed, tell the devbox Q thread"; }
+  mkdir -p "$tmp/x" "$root"
+  tar -xzf "$tmp/pkg.tgz" -C "$tmp/x"
+  [[ -f "$tmp/x/package/skills/modern-web-guidance/modern-web.mjs" ]] || { rm -rf "$tmp"; die "unexpected package layout"; }
+  mv "$tmp/x" "$dir" 2>/dev/null || [[ -f "$cli" ]] || { rm -rf "$tmp"; die "could not install to $dir"; }
+  rm -rf "$tmp"
+  echo "mwg: installed modern-web-guidance $VERSION (integrity verified) in $dir" >&2
+}
+
+# Node 25 or later: earlier versions have no network permission to deny.
+node_major() { "$1" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
+pick_node() {
+  local n best="" best_major=0 major
+  n=$(command -v node 2>/dev/null || true)
+  if [[ -n "$n" ]] && (( $(node_major "$n") >= 25 )); then echo "$n"; return; fi
+  for n in "$HOME"/.nvm/versions/node/v*/bin/node; do
+    [[ -x "$n" ]] || continue
+    major=$(node_major "$n")
+    if (( major >= 25 && major > best_major )); then best="$n" best_major=$major; fi
+  done
+  [[ -n "$best" ]] || die "needs Node 25 or later (nvm install 26)"
+  echo "$best"
+}
+
+run() {
+  local node tmpw
+  node=$(pick_node)
+  tmpw="${TMPDIR:-/tmp}"
+  tmpw="${tmpw%/}"
+  env -u NODE_OPTIONS DISABLE_TELEMETRY=1 ENABLE_FILE_LOGGING=false \
+    "$node" --permission \
+      --allow-fs-read="$dir" --allow-fs-read="$PWD" --allow-fs-read="$tmpw" \
+      --allow-fs-write="$tmpw" \
+      "$@"
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  search|retrieve|list|legacy-scan)
+    fetch
+    run "$cli" "$@"
+    ;;
+  fetch)
+    fetch
+    echo "modern-web-guidance $VERSION at $dir"
+    ;;
+  check)
+    fetch
+    echo "pinned: modern-web-guidance $VERSION"
+    echo "integrity: $INTEGRITY"
+    node=$(pick_node)
+    echo "node: $node ($("$node" --version))"
+    # 1. Telemetry off: a search must succeed inside the sandbox (no child process, no network).
+    run "$cli" search "light dismiss dialog" >/dev/null 2>&1 \
+      || { echo "FAIL: search with telemetry off did not run cleanly in the sandbox"; exit 1; }
+    echo "ok: with DISABLE_TELEMETRY=1 the search ran without a child process or network"
+    # 2. Control: telemetry on, same sandbox. The CLI must try to start its sender (a child node
+    #    process) and be refused, so nothing leaves the machine and the opt-out is what made 1 pass.
+    out=$(env -u NODE_OPTIONS -u DISABLE_TELEMETRY "$node" --permission \
+      --allow-fs-read="$dir" --allow-fs-read="$PWD" --allow-fs-write="${TMPDIR:-/tmp}" \
+      "$cli" search "light dismiss dialog" 2>&1 >/dev/null || true)
+    grep -q "permission: 'ChildProcess'" <<<"$out" \
+      || { echo "FAIL: control run did not hit the telemetry sender; review the CLI (UPDATING.md)"; echo "$out" | head -5; exit 1; }
+    echo "ok: control run with telemetry on was refused when it tried to start the sender"
+    ;;
+  -h|--help|help|"")
+    usage
+    ;;
+  *)
+    die "'$cmd' is not available through the devbox wrapper (set-*, install, update and uninstall belong to Q); see 'mwg --help'"
+    ;;
+esac

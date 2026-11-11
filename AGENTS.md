@@ -48,6 +48,12 @@ and phone transport. This file is the instruction set for every coding agent.
 - **Browser:** `npx agent-browser` headless, or the shared DEV instance through
   `~/projects/devbox/scripts/dev-browser.sh ab <session> …` (claude-in-chrome deviceId
   `a3ba6c61-b88e-4654-8fd3-37b42242113b`). Never launch another Chrome; Playwright is not used.
+- **Web guidance (settings pages only):** before changing the settings pages' HTML, CSS or JS (`docs/`,
+  `src/shared/franchise-face/config.tmpl.html` and `pages/`), check the shared `modern-web-guidance` skill
+  (`.agents/skills/modern-web-guidance/scripts/mwg search "<2-5 words>"`). It is optional, and not for
+  the watch C code, the PKJS or `html_render` pages. Baseline target: **Baseline Widely available**,
+  kept conservative because the pages run in the rePebble phone app's web view, whose engine and
+  version the project docs don't state (2026-11-11).
 - **Publishing:** `.env` (gitignored) holds the shared devbox Cloudflare token, so
   `npm run pebble:publish-config` needs no `wrangler login`; never run `wrangler login` on devbox
   and never print `.env`. The settings pages are live for installed watches: publish only when asked.

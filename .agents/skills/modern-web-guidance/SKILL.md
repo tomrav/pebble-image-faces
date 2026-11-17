@@ -20,7 +20,7 @@ From the project root:
 .agents/skills/modern-web-guidance/scripts/mwg retrieve light-dismiss-a-dialog,html
 ```
 
-- **Query:** 2–5 words for one capability. Name the UI primitive or platform feature
+- **Query:** 2–5 English words for one capability. Name the UI primitive or platform feature
   ("confirm dialog", "date picker input", "responsive data table"). Leave out framework,
   product, file and app names. Split a compound task into separate searches.
 - `search` returns JSON (`id`, `description`). `retrieve` the ids that match, comma-separated,

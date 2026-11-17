@@ -7,8 +7,8 @@
 # UPDATING.md there; never edit a project's copy.
 set -euo pipefail
 
-VERSION=1.0.0
-INTEGRITY='sha512-vafIZwC8AS6QjM2yyoflZbnc7n3/TVOMLbEMRdPTwcFy0f9/Tq8s5rJQ8UIqRt2KPl9ixravyaMR4nTGuUrcmg=='
+VERSION=1.0.1
+INTEGRITY='sha512-5ztUh5F1p2PewnSkA6EhsGUXqomaZY9qe6iWJCU4JbIQxHTky7s5lMJcPE4EbD1uhbQZIhl0HROH0+s6fIiGzg=='
 
 root="${MWG_HOME:-$HOME/.local/share/devbox/modern-web-guidance}"
 dir="$root/$VERSION"

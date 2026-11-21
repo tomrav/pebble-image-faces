@@ -22,8 +22,12 @@ if (!existsSync(path.join(dir, 'index.html'))) {
   process.exit(1);
 }
 
+// Pinned: an unpinned `npx --yes wrangler` fetches whatever is newest at publish
+// time, unreviewed. Bump it deliberately (a release at least 7 days old).
+const WRANGLER = 'wrangler@4.162.0';
+
 const wrangler = (args) =>
-  execFileSync('npx', ['--yes', 'wrangler', ...args], {
+  execFileSync('npx', ['--yes', WRANGLER, ...args], {
     stdio: 'inherit',
     env: process.env,
   });
@@ -32,7 +36,7 @@ const wrangler = (args) =>
 // Create it up front so the script also works non-interactively.
 let projects;
 try {
-  projects = execFileSync('npx', ['--yes', 'wrangler', 'pages', 'project', 'list'], {
+  projects = execFileSync('npx', ['--yes', WRANGLER, 'pages', 'project', 'list'], {
     encoding: 'utf8',
     env: process.env,
   });

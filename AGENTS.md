@@ -34,8 +34,8 @@ and phone transport. This file is the instruction set for every coding agent.
 **Scope check first:** this section applies only when the session runs as the `devbox` user
 (`id -un` prints `devbox`, checkout at `/Users/devbox/projects/pebble-image-faces`). Anywhere else, ignore it.
 
-- **Toolchain on devbox:** `pebble` (pebble-tool 5.0.40, installed with uv into `~/.local/bin`),
-  SDK 4.33.1 under `~/Library/Application Support/Pebble SDK`, Node 24 via nvm. The image scripts
+- **Toolchain on devbox:** `pebble` (pebble-tool 5.2.0, installed with uv into `~/.local/bin`),
+  SDK 4.44 under `~/Library/Application Support/Pebble SDK`, Node 24 via nvm. The image scripts
   call plain `python3` and need Pillow + numpy: prepend `~/.local/share/devbox/pebble-py/bin` to
   PATH before `pebble:gen-faces` / `pebble:gen-photo-face`. Homebrew is Tom's and read-only; never
   `brew install`, ask Tom.
